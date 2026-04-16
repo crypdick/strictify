@@ -2,11 +2,13 @@
 
 ## Overview
 
-`strictify-repo` is a Claude Code plugin that applies opinionated Python code quality enforcement to any repository. It analyzes what's already in place, proposes strictness additions across 15 categories, checks in with the user before applying, and installs self-reinforcing hookify rules that capture ongoing taste preferences.
+`strictify-repo` is a Claude Code plugin that applies opinionated Python code quality enforcement to any repository. It analyzes what's already in place, proposes strictness additions across 21 categories, checks in with the user before applying, and installs self-reinforcing hookify rules that capture ongoing taste preferences.
 
 ### Philosophy
 
-Inspired by [AI Is Forcing Us to Write Good Code](https://bits.logic.inc/p/ai-is-forcing-us-to-write-good-code): AI agents amplify whatever quality level your codebase has. The only guardrails are the ones you set and enforce. This plugin exists to enforce taste programmatically — not strictness for its own sake, but practices that make code better for both humans and AI agents to work with.
+Inspired by [AI Is Forcing Us to Write Good Code](https://bits.logic.inc/p/ai-is-forcing-us-to-write-good-code) and [Harness Engineering](https://openai.com/index/harness-engineering/): AI agents amplify whatever quality level your codebase has. The only guardrails are the ones you set and enforce. This plugin exists to enforce taste programmatically — not strictness for its own sake, but practices that make code better for both humans and AI agents to work with.
+
+From OpenAI's harness engineering experience: "building software still demands discipline, but the discipline shows up more in the scaffolding rather than the code." The tooling, abstractions, and feedback loops that keep the codebase coherent are the primary leverage point. Agent legibility — making code, docs, and architecture navigable by AI — is a first-class goal alongside human readability.
 
 ### Core Principles
 
@@ -45,6 +47,7 @@ strictify-repo/
         └── assets/
             ├── hookify.taste-enforcer.local.md
             ├── hookify.no-junk-drawers.local.md
+            ├── hookify.parse-dont-validate.local.md
             └── hookify.semantic-types.local.md
 ```
 
@@ -68,23 +71,46 @@ Present the user with a summary of what's already in place and what would be add
 
 #### Categories
 
+**Static Analysis & Type Safety**
+
 1. **Pre-commit framework** — install if missing, add missing hooks
 2. **Ruff** — lint rules (`E`, `W`, `F`, `I`, `B`, `UP`, `C4`, `SIM`, `RUF`) and format config
 3. **mypy** — `strict = true` with pragmatic exceptions for the project's frameworks
 4. **Beartype** — add dependency, insert `beartype_this_package()` in package `__init__.py`
 5. **Semantic typing guidance** `[blog]` — hookify rule nudging toward `NewType`/`TypeAlias` for domain concepts
-6. **Vulture** — dead code detection with sensible ignore list
-7. **Xenon** — cyclomatic complexity ceiling (max-average C)
-8. **Pyupgrade + flynt** — modernize syntax to target Python version
-9. **Coverage enforcement** `[blog]` — `fail_under = 100`, coverage report as explicit todo list, curated `exclude_lines` for `TYPE_CHECKING`, `@abstractmethod`, `__repr__`, etc.
-10. **Fast test infrastructure** `[blog]` — pytest-xdist parallel execution, test timeouts, `--failed-first` for fast feedback
-11. **Filesystem discipline** `[blog]` — file length limits (400 lines), hookify rule warning on `utils.py`/`helpers.py`/`misc.py` creation
-12. **Ephemeral environment setup** `[blog]` — if uv detected, ensure `uv run` works as single-command entry; add bootstrap script or documentation
-13. **Custom hooks** — exception handling, print bans, timeless comments, future annotations
-14. **Hygiene hooks** — trailing whitespace, large files, merge conflicts, debug statements, private key detection
-15. **Taste enforcer** — hookify rule that captures ongoing user preferences
+6. **Parse-don't-validate discipline** `[blog]` `[harness]` — hookify rule encouraging boundary parsing with constrained types (Pydantic models, frozen dataclasses, `NewType`) instead of scattered validation. "Don't probe data YOLO-style — validate boundaries or rely on typed SDKs."
 
-Items marked `[blog]` originate from the blog post's recommendations. All others come from battle-tested practices in the gantt-believe-it and cfg repos.
+**Code Health**
+
+7. **Vulture** — dead code detection with sensible ignore list
+8. **Xenon** — cyclomatic complexity ceiling (max-average C)
+9. **Pyupgrade + flynt** — modernize syntax to target Python version
+10. **Structured logging** `[harness]` — `check_print_statements.py` also detects unstructured logging patterns (string concatenation/%-formatting in log calls) and nudges toward structured `logger.info("message", key=value)` style
+
+**Testing & Coverage**
+
+11. **Coverage enforcement** `[blog]` — `fail_under = 100`, coverage report as explicit todo list, curated `exclude_lines` for `TYPE_CHECKING`, `@abstractmethod`, `__repr__`, etc.
+12. **Fast test infrastructure** `[blog]` — pytest-xdist parallel execution, test timeouts, `--failed-first` for fast feedback
+
+**Architecture & Organization**
+
+13. **Filesystem discipline** `[blog]` — file length limits (400 lines), hookify rule warning on `utils.py`/`helpers.py`/`misc.py` creation. The problem isn't shared code, it's *anonymous* shared code — if you need a shared utility, name it after what it does.
+14. **Architectural layer enforcement** `[harness]` — analyze the project's domain structure and propose dependency direction linting. For a Django project, this might be models → services → views → urls. For a CLI tool: parsing → domain → output. For a data pipeline: extract → transform → load. The agent figures out the appropriate layers for the target project, creates custom lint rules enforcing valid dependency edges, and documents the architecture. Constraints may be lightweight for small projects and more rigid for larger ones.
+15. **Quality grades per domain** `[harness]` — create a quality scorecard (`docs/QUALITY.md` or similar) grading each module/domain on coverage, type safety, complexity, and test health. This becomes a living document tracking gaps over time. The agent assesses the current state and produces initial grades, with guidance on how to maintain and update them.
+
+**Environment & Infrastructure**
+
+16. **Ephemeral environment setup** `[blog]` — if uv detected, ensure `uv run` works as single-command entry; add bootstrap script or documentation
+17. **Per-worktree app booting** `[harness]` — ensure the app can run in isolation, one instance per git worktree or branch. The agent analyzes what this means for the specific project (configurable ports? separate DB names? isolated caches?) and sets up or documents the necessary configuration. For simple projects this may just be confirming `uv run` works from any worktree; for complex ones it may involve environment variable templating or a dev setup script.
+
+**Ongoing Enforcement**
+
+18. **Custom hooks** — exception handling, print/logging bans, timeless comments, future annotations
+19. **Hygiene hooks** — trailing whitespace, large files, merge conflicts, debug statements, private key detection
+20. **Doc gardening** `[harness]` — set up infrastructure for detecting stale documentation that doesn't reflect actual code behavior. This may be a pre-commit hook that checks doc freshness, a CI job, or guidance for a recurring agent task that scans for drift between docs and code and opens fix-up PRs. The agent assesses what level of doc gardening infrastructure fits the project's maturity.
+21. **Taste enforcer** — hookify rule that captures ongoing user preferences
+
+Items marked `[blog]` originate from the "AI Is Forcing Us to Write Good Code" blog post. Items marked `[harness]` originate from OpenAI's "Harness Engineering" post. All others come from battle-tested practices in the gantt-believe-it and cfg repos.
 
 ### Phase 3: Apply
 
@@ -97,10 +123,14 @@ For each approved category:
 - Install hookify rules into `.claude/`
 - Run `pre-commit install` if not already set up
 - Run `uv add --dev` (or `pip install`) for new dev dependencies
+- Analyze project domain structure and create architectural layer documentation and lint rules (if approved)
+- Create initial quality scorecard in `docs/QUALITY.md` (if approved)
+- Set up doc gardening infrastructure appropriate to the project's maturity (if approved)
+- Configure per-worktree isolation if applicable (if approved)
 
 ## Hookify Rules
 
-Three hookify rules are installed into the target project's `.claude/` directory.
+Four hookify rules are installed into the target project's `.claude/` directory.
 
 ### Rule 1: `hookify.taste-enforcer.local.md`
 
@@ -150,9 +180,51 @@ action: warn
 > - `auth/tokens.py` not `auth/helpers.py`
 > - `parsing/csv_reader.py` not `common/misc.py`
 >
-> If this file genuinely serves a cross-cutting purpose, consider whether the functions belong in the modules that use them instead.
+> The problem isn't shared code — it's *anonymous* shared code. If you genuinely need a shared utility, name it after what it does and put it where it belongs. Prefer a well-named shared package with centralized invariants over hand-rolled helpers scattered across domains. But if the functions are only used by one module, they belong in that module.
 
-### Rule 3: `hookify.semantic-types.local.md`
+### Rule 3: `hookify.parse-dont-validate.local.md`
+
+```yaml
+name: parse-dont-validate
+enabled: true
+event: file
+conditions:
+  - field: file_path
+    operator: regex_match
+    pattern: \.py$
+  - field: new_text
+    operator: regex_match
+    pattern: (isinstance\(.*,\s*(str|int|dict|list)\)|def \w+\(.*:\s*dict\b|-> None.*\n.*raise|\.get\(|if .+ is not None)
+action: warn
+```
+
+**Message body:**
+
+> Possible validate-then-discard pattern detected. The principle "parse, don't validate" means: coerce unstructured data into constrained types at the boundary of your system, so downstream code never needs to re-validate.
+>
+> **Instead of validating and discarding the evidence:**
+> ```python
+> def process(data: dict) -> None:
+>     if "user_id" not in data:
+>         raise ValueError("missing user_id")  # checked and discarded
+> ```
+>
+> **Parse into a constrained type that carries proof:**
+> ```python
+> @dataclass(frozen=True)
+> class UserRequest:
+>     user_id: UserId
+>     # Construction IS validation. If it exists, it's valid.
+>
+> def process(request: UserRequest) -> None:
+>     # No validation needed — the type proves it.
+> ```
+>
+> Use Pydantic models, frozen dataclasses, or `NewType` to carry proof through the type system. Parse at the boundary, execute with confidence downstream.
+>
+> If this is internal code operating on already-parsed types, ignore this message.
+
+### Rule 4: `hookify.semantic-types.local.md`
 
 ```yaml
 name: semantic-types
@@ -192,7 +264,7 @@ Five Python scripts are copied into the target repo's `scripts/pre_commit_hooks/
 
 All scripts follow the same contract:
 - Accept filenames as arguments (from pre-commit `pass_filenames`)
-- Report violations as `{file}:{line}: {message}`
+- Report violations as `{file}:{line}: {message} — {remediation}` where remediation is agent-readable guidance on how to fix the issue (not just what's wrong, but how to make it right). This makes error output useful for both humans and AI agents working on the codebase. `[harness]`
 - Exit nonzero on failure
 - Support per-line exemption via `# allow: {hook-name}` comments
 
@@ -208,6 +280,13 @@ Philosophy: fail fast, fix root cause rather than masking errors.
 ### `check_print_statements.py`
 
 Bans `print()` in production code. Allowed in `tests/`, `scripts/`, and CLI entry points (agent adapts the allowed-paths list per repo). Enforces use of a proper logger (loguru, logging, structlog — whatever the project uses).
+
+Also detects unstructured logging anti-patterns `[harness]`:
+- String concatenation in log calls: `logger.info("user: " + user_id)`
+- %-formatting in log calls: `logger.info("user: %s", user_id)`
+- f-string formatting in log calls: `logger.info(f"user: {user_id}")`
+
+Nudges toward structured logging: `logger.info("user logged in", user_id=user_id)` (for structlog/loguru) or at minimum `logger.info("user logged in", extra={"user_id": user_id})` (for stdlib logging).
 
 ### `check_file_length.py`
 
