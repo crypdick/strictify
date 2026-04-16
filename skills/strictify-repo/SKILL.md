@@ -143,7 +143,7 @@ Custom pre-commit hook scripts in `scripts/`. All scripts accept filenames as ar
 
 Hookify rule files in `assets/`. Copy these to the target repo's `.claude/` directory.
 
-- **`assets/hookify.taste-enforcer.local.md`** -- captures user taste preferences and codifies them as hooks, rules, or config
-- **`assets/hookify.no-junk-drawers.local.md`** -- warns on junk-drawer module names (utils.py, helpers.py, misc.py)
-- **`assets/hookify.parse-dont-validate.local.md`** -- nudges toward boundary parsing with constrained types
-- **`assets/hookify.semantic-types.local.md`** -- detects bare primitives for domain concepts, nudges toward NewType
+- **`assets/hookify.taste-enforcer.md`** -- captures user taste preferences and codifies them as hooks, rules, or config
+- **`assets/hookify.no-junk-drawers.md`** -- warns on junk-drawer module names (utils.py, helpers.py, misc.py)
+- **`assets/hookify.parse-dont-validate.md`** -- nudges toward boundary parsing with constrained types
+- **`assets/hookify.semantic-types.md`** -- detects bare primitives for domain concepts, nudges toward NewType
