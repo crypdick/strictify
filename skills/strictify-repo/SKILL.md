@@ -74,8 +74,8 @@ Present findings grouped by the 6 category groups below. For each category, show
 ### Ongoing Enforcement (categories 18-21)
 
 18. **Custom hooks** -- exception handling (`check_exception_handling.py`), print/logging bans (`check_print_statements.py`), timeless comments (`check_timeless_comments.py`), future annotations (`fix_future_annotations.py`). Read each script from `scripts/` to understand behavior and adapt to the target repo.
-19. **Hygiene hooks** -- trailing whitespace, end-of-file-fixer, large files, merge conflicts, debug statements, private key detection. Standard pre-commit hooks from the pre-commit-hooks repository.
-20. **Doc gardening** -- detect stale documentation that does not reflect actual code behavior. Set up infrastructure appropriate to the project's maturity: a pre-commit hook, a CI job, or guidance for a recurring agent task that scans for drift and opens fix-up PRs.
+19. **Hygiene hooks** -- trailing whitespace, end-of-file-fixer, large files, merge conflicts, debug statements, private key detection, plus `detect-secrets` for entropy-based secret scanning. Standard pre-commit hooks from the pre-commit-hooks repo and `Yelp/detect-secrets`. **Out of scope:** personal/prod strings (internal hostnames, real usernames, prod URLs). Any mechanism for these either commits the pattern (defeating the point) or requires per-user config strictify cannot bootstrap -- users who care should add a local hook that reads patterns from a gitignored file.
+20. **Doc gardening** -- detect stale documentation that does not reflect actual code behavior. Set up infrastructure appropriate to the project's maturity: a pre-commit hook, a CI job, or guidance for a recurring agent task that scans for drift and opens fix-up PRs. Pair with the `doc-code-coupling` hookify rule that reminds authors to leave `NOTE:` back-pointers at code sites whose values are documented elsewhere.
 21. **Taste enforcer** -- hookify rule that captures ongoing user preferences. When the user expresses a coding preference, determine whether it can be codified as a pre-commit hook script, a hookify rule, or a pyproject.toml setting, then create or update the enforcement mechanism.
 
 ## Phase 3: Apply
@@ -147,3 +147,4 @@ Hookify rule files in `assets/`. Copy these to the target repo's `.claude/` dire
 - **`assets/hookify.no-junk-drawers.md`** -- warns on junk-drawer module names (utils.py, helpers.py, misc.py)
 - **`assets/hookify.parse-dont-validate.md`** -- nudges toward boundary parsing with constrained types
 - **`assets/hookify.semantic-types.md`** -- detects bare primitives for domain concepts, nudges toward NewType
+- **`assets/hookify.doc-code-coupling.md`** -- reminds authors to leave `NOTE:` back-pointers at code sites whose values are also documented in prose, so code and docs don't drift out of sync
