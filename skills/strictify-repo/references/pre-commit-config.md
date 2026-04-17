@@ -44,6 +44,24 @@ repos:
       - id: check-added-large-files
 
   # ──────────────────────────────────────────────────────────────────────
+  # detect-secrets -- entropy-based secret detection
+  # Catches API keys, tokens, and high-entropy strings. Requires a one-time
+  # bootstrap of the baseline file:
+  #   uvx detect-secrets scan > .secrets.baseline
+  # Review the baseline before committing, then re-audit on changes:
+  #   uvx detect-secrets audit .secrets.baseline
+  # NOTE: this catches real secrets only. Personal/prod strings (internal
+  # hostnames, real usernames, prod URLs) are NOT covered -- see the
+  # "Out of scope" note in SKILL.md.
+  # ──────────────────────────────────────────────────────────────────────
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+        exclude: uv\.lock
+
+  # ──────────────────────────────────────────────────────────────────────
   # Ruff -- linting and formatting
   # Replaces flake8, isort, pyupgrade (partially), and black.
   # --fix auto-corrects safe issues (import sorting, unused imports).
