@@ -1,0 +1,17 @@
+{
+  "name": "strictify",
+  "owner": {
+    "name": "Ricardo Decal"
+  },
+  "metadata": {
+    "description": "Apply opinionated Python code quality enforcement to any repo"
+  },
+  "plugins": [
+    {
+      "name": "strictify",
+      "source": "./",
+      "description": "Apply opinionated Python code quality enforcement to any repo. Analyzes existing config, proposes strictness additions across 21 categories, and installs self-reinforcing hookify rules.",
+      "version": "0.3.0"
+    }
+  ]
+}
