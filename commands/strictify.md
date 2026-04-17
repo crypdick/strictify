@@ -17,7 +17,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill, AskUserQuestion
 
 ## Your task
 
-Use the strictify-repo skill to apply opinionated Python code quality enforcement to this repository.
+Use the strictify skill to apply opinionated Python code quality enforcement to this repository.
 
 The skill drives a three-phase workflow:
 1. **Analyze** — use the context above plus additional exploration to understand the repo's current state

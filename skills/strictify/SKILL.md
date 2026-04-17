@@ -1,9 +1,9 @@
 ---
-name: strictify-repo
-description: This skill should be used when the user asks to "strictify a repo", "add code quality enforcement", "make this repo strict", "add pre-commit hooks", "add type checking", "enforce code quality", "set up linting", or runs the /strictify-repo command.
+name: strictify
+description: This skill should be used when the user asks to "strictify a repo", "add code quality enforcement", "make this repo strict", "add pre-commit hooks", "add type checking", "enforce code quality", "set up linting", or runs the /strictify command.
 ---
 
-# Strictify Repo
+# Strictify
 
 ## Overview
 
