@@ -180,6 +180,17 @@ repos:
         language: system
         types: [python]
 
+      # Forbids tests from importing private (leading-underscore) symbols
+      # from first-party packages, so tests verify public behaviour instead
+      # of internal shape. Auto-detects first-party packages from the repo
+      # layout; pass --package NAME to override. Carve-out per import line:
+      # `# allow: private-test-imports`.
+      - id: check-private-test-imports
+        name: Forbid private imports in tests
+        entry: python scripts/pre_commit_hooks/check_private_test_imports.py
+        language: system
+        types: [python]
+
       # Ensures `from __future__ import annotations` is present at
       # the top of every Python file for PEP 563 deferred evaluation.
       # This enables modern type syntax (X | Y) on older Pythons and

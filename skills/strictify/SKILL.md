@@ -73,7 +73,7 @@ Present findings grouped by the 6 category groups below. For each category, show
 
 ### Ongoing Enforcement (categories 18-21)
 
-18. **Custom hooks** -- exception handling (`check_exception_handling.py`), print/logging bans (`check_print_statements.py`), timeless comments (`check_timeless_comments.py`), future annotations (`fix_future_annotations.py`). Read each script from `scripts/` to understand behavior and adapt to the target repo.
+18. **Custom hooks** -- exception handling (`check_exception_handling.py`), print/logging bans (`check_print_statements.py`), timeless comments (`check_timeless_comments.py`), future annotations (`fix_future_annotations.py`), and tests-verify-public-behaviour (`check_private_test_imports.py`, which forbids tests from importing leading-underscore first-party symbols so they exercise the public surface instead of internal shape). Read each script from `scripts/` to understand behavior and adapt to the target repo.
 19. **Hygiene hooks** -- trailing whitespace, end-of-file-fixer, large files, merge conflicts, debug statements, private key detection, plus `detect-secrets` for entropy-based secret scanning. Standard pre-commit hooks from the pre-commit-hooks repo and `Yelp/detect-secrets`. **Out of scope:** personal/prod strings (internal hostnames, real usernames, prod URLs). Any mechanism for these either commits the pattern (defeating the point) or requires per-user config strictify cannot bootstrap -- users who care should add a local hook that reads patterns from a gitignored file.
 20. **Doc gardening** -- detect stale documentation that does not reflect actual code behavior. Set up infrastructure appropriate to the project's maturity: a pre-commit hook, a CI job, or guidance for a recurring agent task that scans for drift and opens fix-up PRs. Pair with the `doc-code-coupling` hookify rule that reminds authors to leave `NOTE:` back-pointers at code sites whose values are documented elsewhere.
 21. **Taste enforcer** -- hookify rule that captures ongoing user preferences. When the user expresses a coding preference, determine whether it can be codified as a pre-commit hook script, a hookify rule, or a pyproject.toml setting, then create or update the enforcement mechanism.
@@ -89,7 +89,7 @@ For each approved category, perform the following. Read the referenced files bef
 
 ### Scripts and assets
 
-- **Copy and adapt scripts** -- read each script from `scripts/` (check_exception_handling.py, check_print_statements.py, check_file_length.py, check_timeless_comments.py, fix_future_annotations.py). Adapt paths and package names to the target repo. Write to `scripts/pre_commit_hooks/` in the target repo.
+- **Copy and adapt scripts** -- read each script from `scripts/` (check_exception_handling.py, check_print_statements.py, check_file_length.py, check_timeless_comments.py, check_private_test_imports.py, fix_future_annotations.py). Adapt paths and package names to the target repo. Write to `scripts/pre_commit_hooks/` in the target repo. `check_private_test_imports.py` auto-detects first-party packages from the target's layout, so it needs no per-repo edit (pass `--package` only to override).
 - **Beartype integration** -- read `references/beartype-setup.md`. Modify the package `__init__.py` to insert `beartype_this_package()`.
 - **Hookify rules** -- copy from `assets/` (taste-enforcer, no-junk-drawers, parse-dont-validate, semantic-types) to the target repo's `.claude/` directory.
 
@@ -137,6 +137,7 @@ Custom pre-commit hook scripts in `scripts/`. All scripts accept filenames as ar
 - **`scripts/check_print_statements.py`** -- bans `print()` in production code, detects unstructured logging patterns
 - **`scripts/check_file_length.py`** -- enforces max 400 logical lines per file
 - **`scripts/check_timeless_comments.py`** -- detects temporal keywords in comments (legacy, new, old, TODO, FIXME, HACK, temporary)
+- **`scripts/check_private_test_imports.py`** -- forbids tests from importing leading-underscore first-party symbols; auto-detects first-party packages, supports `--package` overrides and a `# allow: private-test-imports` carve-out
 - **`scripts/fix_future_annotations.py`** -- ensures `from __future__ import annotations` is placed correctly; runs as a fixer
 
 ### Assets

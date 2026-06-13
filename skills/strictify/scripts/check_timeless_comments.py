@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Pre-commit hook to enforce timeless comments.
 
-Philosophy: Comments should describe *what* code does and *why*, not document
-historical changes or evolution.  Temporal language ("legacy", "old",
-"replaced", "no longer") couples comments to the repo's past instead of
-explaining its present state.
+Philosophy: Comments should describe *what* code does and *why*, not narrate
+repository history. Temporal language that centers chronology instead of
+current behavior makes comments age poorly and obscures the code's present
+intent.
 
 Detects:
 - Temporal keywords in inline comments and docstrings (see ``TEMPORAL_KEYWORDS``)
@@ -170,7 +170,7 @@ def main(filenames: list[str]) -> int:
             exit_code = 1
             total_violations += len(violations)
 
-            for line_num, comment_text, keyword in violations:
+            for line_num, _comment_text, keyword in violations:
                 print(
                     f"{file_path}:{line_num}: Temporal keyword '{keyword}' "
                     f"in comment — rewrite to describe current behavior, "
@@ -182,9 +182,9 @@ def main(filenames: list[str]) -> int:
         print(f"Found {total_violations} non-timeless comment(s).")
         print("")
         print("  FIX the comment (preferred):")
-        print("     BAD:  # New function that replaces old behavior")
+        print("     BAD:  # Temporary function for a separate code path")
         print("     GOOD: # Calculates total cost including tax")
-        print("     If the comment references legacy code, DELETE the legacy code.")
+        print("     If the comment only explains repository history, delete it.")
         print("")
         print("  EXEMPT with '# temporal-ok' or '# allow: timeless-comments'")
         print("  ONLY when:")

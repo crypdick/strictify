@@ -154,7 +154,7 @@ def _iter_target_files(repo_root: Path, argv: list[str]) -> list[Path]:
             out.append(p)
         return out
 
-    # Manual invocation fallback: scan the repo
+    # Manual invocation path: scan the repo when no filenames are provided.
     return list(repo_root.rglob("*.py"))
 
 
@@ -179,7 +179,7 @@ def main(argv: list[str]) -> int:
         try:
             if _fix_file(p):
                 changed.append(p)
-        except Exception as e:  # noqa: BLE001
+        except (OSError, UnicodeDecodeError) as e:
             print(
                 f"{p}:1: error processing file — {e}"
             )

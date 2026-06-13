@@ -129,13 +129,13 @@ def main(filenames: list[str] | None = None) -> int:
                 first_lines = [next(f, "") for _ in range(5)]
                 if any("# allow: file-length" in line for line in first_lines):
                     continue
-        except Exception:  # noqa: BLE001
-            pass
+        except OSError:
+            continue
 
         result = check_file_length(filepath, args.max_lines)
 
         if result is not None:
-            lloc, message = result
+            _lloc, message = result
             exit_code = 1
             total_violations += 1
             print(f"{filename}:1: {message}")
