@@ -2,7 +2,7 @@
 
 A [Claude Code plugin](https://docs.claude.com/en/docs/claude-code-plugins) that applies opinionated Python code quality enforcement to any repo.
 
-Run `/strictify` in any Python project. It analyzes what's already in place, proposes strictness additions across 21 categories, and applies approved changes — including self-reinforcing [hookify](https://github.com/anthropics/claude-code-plugins/tree/main/hookify) rules that capture your taste preferences as you work.
+Run `/strictify` in any Python project. It analyzes what's already in place, proposes strictness additions across 22 categories, and applies approved changes — including self-reinforcing [hookify](https://github.com/anthropics/claude-code-plugins/tree/main/hookify) rules that capture your taste preferences as you work.
 
 ## Install
 
@@ -30,7 +30,7 @@ Or add to `~/.claude/settings.json`:
 `/strictify` runs a three-phase workflow:
 
 1. **Analyze** — scans pyproject.toml, pre-commit config, package layout, Python version, package manager, test setup, beartype, domain structure
-2. **Propose** — presents 21 categories grouped into 6 areas, showing current state vs. proposed change for each. You veto what you don't want.
+2. **Propose** — presents 22 categories grouped into 6 areas, showing current state vs. proposed change for each. You veto what you don't want.
 3. **Apply** — merges configs, copies scripts, installs hooks, adds dev dependencies
 
 ### Categories
@@ -39,7 +39,7 @@ Or add to `~/.claude/settings.json`:
 |-------|-----------|
 | **Static Analysis & Type Safety** | Pre-commit framework, Ruff, mypy strict, Beartype, Semantic typing (NewType), Parse-don't-validate |
 | **Code Health** | Vulture (dead code), Xenon (complexity), Pyupgrade + Flynt, Structured logging |
-| **Testing & Coverage** | Coverage `fail_under=100`, Fast tests (xdist, timeouts, --failed-first) |
+| **Testing & Coverage** | Coverage `fail_under=100`, Fast tests (xdist, timeouts, --failed-first), Red/green TDD agent directive |
 | **Architecture & Organization** | File length limits, Architectural layers, Quality scorecard |
 | **Environment & Infrastructure** | Ephemeral environments, Per-worktree isolation |
 | **Ongoing Enforcement** | Custom hooks, Hygiene hooks, Doc gardening, Taste enforcer |
