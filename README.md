@@ -51,12 +51,19 @@ Strictify ships two kinds of enforcement, and most categories blend both:
 
 ### Hookify rules
 
-Four rules are installed into your project's `.claude/` directory:
+Two rules are installed into your project's `.claude/` directory — both mechanical, low-false-positive matches:
 
 - **taste-enforcer** — when you express a coding preference ("don't use X", "always prefer Y"), Claude codifies it as a pre-commit hook, hookify rule, or pyproject.toml setting
 - **no-junk-drawers** — warns on `utils.py`, `helpers.py`, `misc.py` — name modules after what they do
-- **parse-dont-validate** — nudges toward boundary parsing with constrained types instead of scattered validation
-- **semantic-types** — catches bare `str`/`int` for domain concepts like `user_id`, nudges toward `NewType`
+
+### Design conventions doc
+
+Judgment-based design principles don't belong in a regex hook — deciding whether a `str` is "really" a domain concept, or whether some inheritance is the right call, takes reading the code. So strictify installs a `CONVENTIONS.md` (adapted from a template) and references it from your `CLAUDE.md`/`AGENTS.md` so agents read and apply it:
+
+- **Composition over inheritance** — small parts + a combiner, and strategy injection, instead of subclass/config explosions
+- **Parse, don't validate** — coerce to constrained types at the boundary; carry proof through types (with the Pydantic-validator caveat)
+- **Semantic types** — `NewType` for domain concepts like `user_id`, `amount`, `slug`
+- **Code/doc coupling** — leave `NOTE:` back-pointers where a value is also documented in prose
 
 ### Custom pre-commit hooks
 

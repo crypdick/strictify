@@ -40,9 +40,13 @@ The heart of the plugin.
   `scripts/pre_commit_hooks/`: `check_exception_handling.py`,
   `check_print_statements.py`, `check_file_length.py`, `check_timeless_comments.py`,
   `check_private_test_imports.py`, and the `fix_future_annotations.py` fixer.
-- **`assets/`** — files copied verbatim into the target repo's `.claude/`:
-  `hookify.*.md` rules (taste-enforcer, no-junk-drawers, parse-dont-validate,
-  semantic-types, doc-code-coupling) and the `agents.red-green-tdd.md` directive.
+- **`assets/`** — files copied into the target repo. `hookify.*.md` rules
+  (taste-enforcer, no-junk-drawers) and `agents.red-green-tdd.md` go into `.claude/`;
+  only mechanical, low-false-positive matches ship as hooks. `CONVENTIONS.md-EXAMPLE`
+  is copied to the repo root as `CONVENTIONS.md`, adapted, and referenced from
+  `CLAUDE.md`/`AGENTS.md` — it holds the judgment-based principles (composition over
+  inheritance, parse-don't-validate, semantic types, code/doc coupling) that were too
+  nuanced to enforce with a regex hook.
 
 ## Invariants
 

@@ -46,8 +46,8 @@ First, use the Phase 1 analysis to filter to the categories that actually fit th
 2. **Ruff** -- lint rules (`E`, `W`, `F`, `I`, `B`, `UP`, `C4`, `SIM`, `RUF`) and format config. Read `references/pyproject-strict.md` for exact settings.
 3. **mypy** -- `strict = true` with pragmatic exceptions for the project's frameworks. Read `references/pyproject-strict.md` for strict mypy config and framework overrides.
 4. **Beartype** -- add dependency, insert `beartype_this_package()` in package `__init__.py`. Read `references/beartype-setup.md` for integration patterns and common issues.
-5. **Semantic typing** -- hookify rule nudging toward `NewType`/`TypeAlias` for domain concepts (user IDs, amounts, slugs). Detects bare primitives used for domain values.
-6. **Parse-don't-validate** -- hookify rule encouraging boundary parsing with constrained types (Pydantic models, frozen dataclasses, `NewType`) instead of scattered validation. Coerce at the boundary, carry proof through types.
+5. **Semantic typing** -- recorded as a principle in the `CONVENTIONS.md` design doc (Phase 3): give domain concepts (user IDs, amounts, slugs) a distinct `NewType`/`TypeAlias` instead of a bare primitive. Deciding *which* primitives carry domain meaning is a judgment call, so it lives in the conventions doc for the agent to apply, not a regex hook.
+6. **Parse-don't-validate** -- recorded as a principle in the `CONVENTIONS.md` design doc (Phase 3): coerce unstructured data into constrained types (Pydantic models, frozen dataclasses, `NewType`) at the boundary and carry proof through types, instead of re-validating downstream. Includes the Pydantic-validator caveat -- a `@field_validator` that doesn't change the static type is a check-and-discard, not a parse.
 
 ### Code Health (categories 7-10)
 
@@ -77,7 +77,7 @@ First, use the Phase 1 analysis to filter to the categories that actually fit th
 
 19. **Custom hooks** -- exception handling (`check_exception_handling.py`), print/logging bans (`check_print_statements.py`), timeless comments (`check_timeless_comments.py`), future annotations (`fix_future_annotations.py`), and tests-verify-public-behaviour (`check_private_test_imports.py`, which forbids tests from importing leading-underscore first-party symbols so they exercise the public surface instead of internal shape). Read each script from `scripts/` to understand behavior and adapt to the target repo.
 20. **Hygiene hooks** -- trailing whitespace, end-of-file-fixer, large files, merge conflicts, debug statements, private key detection, plus `detect-secrets` for entropy-based secret scanning. Standard pre-commit hooks from the pre-commit-hooks repo and `Yelp/detect-secrets`. **Out of scope:** personal/prod strings (internal hostnames, real usernames, prod URLs). Any mechanism for these either commits the pattern (defeating the point) or requires per-user config strictify cannot bootstrap -- users who care should add a local hook that reads patterns from a gitignored file.
-21. **Doc gardening** -- detect stale documentation that does not reflect actual code behavior. Set up infrastructure appropriate to the project's maturity: a pre-commit hook, a CI job, or guidance for a recurring agent task that scans for drift and opens fix-up PRs. Pair with the `doc-code-coupling` hookify rule that reminds authors to leave `NOTE:` back-pointers at code sites whose values are documented elsewhere.
+21. **Doc gardening** -- detect stale documentation that does not reflect actual code behavior. Set up infrastructure appropriate to the project's maturity: a pre-commit hook, a CI job, or guidance for a recurring agent task that scans for drift and opens fix-up PRs. Pair with the *keep code and docs coupled* principle in the `CONVENTIONS.md` design doc (Phase 3): leave `NOTE:` back-pointers at code sites whose values are documented elsewhere, so the two don't drift.
 22. **Taste enforcer** -- hookify rule that captures ongoing user preferences. When the user expresses a coding preference, determine whether it can be codified as a pre-commit hook script, a hookify rule, or a pyproject.toml setting, then create or update the enforcement mechanism.
 
 ## Phase 3: Apply
@@ -93,7 +93,8 @@ For each approved category, perform the following. Read the referenced files bef
 
 - **Copy and adapt scripts** -- read each script from `scripts/` (check_exception_handling.py, check_print_statements.py, check_file_length.py, check_timeless_comments.py, check_private_test_imports.py, fix_future_annotations.py). Adapt paths and package names to the target repo. Write to `scripts/pre_commit_hooks/` in the target repo. `check_private_test_imports.py` auto-detects first-party packages from the target's layout, so it needs no per-repo edit (pass `--package` only to override).
 - **Beartype integration** -- read `references/beartype-setup.md`. Modify the package `__init__.py` to insert `beartype_this_package()`.
-- **Hookify rules** -- copy from `assets/` (taste-enforcer, no-junk-drawers, parse-dont-validate, semantic-types) to the target repo's `.claude/` directory.
+- **Hookify rules** -- copy from `assets/` (taste-enforcer, no-junk-drawers) to the target repo's `.claude/` directory. Only these two are shipped as hooks: a prompt-keyword trigger and a filename match, both mechanical and low-false-positive. The judgment-based design principles that used to be hookify rules now live in the `CONVENTIONS.md` design doc (see *Infrastructure setup* below).
+- **Design conventions doc** -- copy `assets/CONVENTIONS.md-EXAMPLE` to the target as `CONVENTIONS.md`, then adapt it: trim principles that do not fit, sharpen examples to use the repo's real types, add repo-specific conventions. It seeds judgment-based principles too nuanced for a regex hook -- composition over inheritance, parse-don't-validate, semantic types, and code/doc coupling. Append a pointer line to the repo's `CLAUDE.md`/`AGENTS.md` (e.g. "See `CONVENTIONS.md` for design principles") so agents load it. This is an agent-legibility artifact alongside `docs/ARCHITECTURE.md` and `docs/QUALITY.md`.
 
 ### Dev dependencies
 
@@ -145,10 +146,9 @@ Custom pre-commit hook scripts in `scripts/`. All scripts accept filenames as ar
 
 ### Assets
 
-Hookify rule files in `assets/`. Copy these to the target repo's `.claude/` directory.
+Files in `assets/`. Copy these to the target repo.
 
-- **`assets/hookify.taste-enforcer.md`** -- captures user taste preferences and codifies them as hooks, rules, or config
-- **`assets/hookify.no-junk-drawers.md`** -- warns on junk-drawer module names (utils.py, helpers.py, misc.py)
-- **`assets/hookify.parse-dont-validate.md`** -- nudges toward boundary parsing with constrained types
-- **`assets/hookify.semantic-types.md`** -- detects bare primitives for domain concepts, nudges toward NewType
-- **`assets/hookify.doc-code-coupling.md`** -- reminds authors to leave `NOTE:` back-pointers at code sites whose values are also documented in prose, so code and docs don't drift out of sync
+- **`assets/hookify.taste-enforcer.md`** -- hookify rule (prompt event) that captures user taste preferences and codifies them as hooks, rules, or config. Copy to `.claude/`.
+- **`assets/hookify.no-junk-drawers.md`** -- hookify rule (file event) that warns on junk-drawer module names (utils.py, helpers.py, misc.py) by filename match. Copy to `.claude/`.
+- **`assets/CONVENTIONS.md-EXAMPLE`** -- template for the `CONVENTIONS.md` design-conventions doc: judgment-based principles (composition over inheritance, parse-don't-validate, semantic types, code/doc coupling) that an agent reads and applies with judgment rather than a regex. Copy to the repo root as `CONVENTIONS.md`, adapt per repo, and reference from `CLAUDE.md`/`AGENTS.md`.
+- **`assets/agents.red-green-tdd.md`** -- red/green TDD agent directive. Copy to `.claude/`.
