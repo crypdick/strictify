@@ -34,6 +34,8 @@ def process(request: UserRequest) -> None:
 
 Use Pydantic models, frozen dataclasses, or `NewType` to carry proof through the type system. Parse at the boundary, execute with confidence downstream.
 
+**Caveat on Pydantic field validators:** a `@field_validator` runs at runtime but does *not* change the static type — a validator that confirms `email: str` is well-formed still leaves the field typed `str`, so the type checker sees no proof and downstream code can re-validate or misuse it. To make Pydantic validation *real parsing*, give the proven value a distinct type: annotate the field with a custom constrained type (`Annotated[str, AfterValidator(...)]` bound to a `NewType`/branded type) or wrap the model's output in a `NewType`/frozen dataclass at the boundary. A plain validator is a check-and-discard, not a parse.
+
 The same boundary applies to untyped third-party clients (SDKs, HTTP responses, DB rows): wrap them in a thin typed adapter that parses their loose `dict`/`Any` output into your own constrained types, so the weak types stop at the edge instead of leaking through the codebase.
 
 If this is internal code operating on already-parsed types, ignore this message.
