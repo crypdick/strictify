@@ -1,0 +1,16 @@
+# Ruff config for this repo's own Python — the six stdlib-only pre-commit hook
+# scripts under skills/strictify/scripts/ (the only .py in the repo).
+#
+# Mirrors the strict config strictify ships in
+# skills/strictify/references/pyproject-strict.md, so the plugin's own payloads
+# pass the exact bar the plugin enforces on target repos.
+
+line-length = 110
+preview = true
+
+[lint]
+select = ["E", "W", "F", "I", "B", "UP", "C4", "SIM", "RUF"]
+ignore = ["E501"]  # line-length deferred to the formatter, per the shipped config
+
+[format]
+quote-style = "double"

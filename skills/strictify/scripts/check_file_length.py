@@ -102,9 +102,7 @@ def check_file_length(filepath: Path, max_lines: int) -> tuple[int, str] | None:
 
 def main(filenames: list[str] | None = None) -> int:
     """Run file-length check on provided files."""
-    parser = argparse.ArgumentParser(
-        description="Check for files exceeding logical line count limit"
-    )
+    parser = argparse.ArgumentParser(description="Check for files exceeding logical line count limit")
     parser.add_argument("filenames", nargs="*", help="Filenames to check")
     parser.add_argument(
         "--max-lines",

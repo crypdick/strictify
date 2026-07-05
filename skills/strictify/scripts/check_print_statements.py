@@ -28,7 +28,12 @@ from pathlib import Path
 
 # Logger method names we care about
 _LOGGER_METHODS = frozenset({
-    "debug", "info", "warning", "error", "critical", "exception",
+    "debug",
+    "info",
+    "warning",
+    "error",
+    "critical",
+    "exception",
 })
 
 
@@ -48,8 +53,7 @@ class PrintStatementVisitor(ast.NodeVisitor):
             if not self._has_allow_comment(line_num, end_line):
                 self.violations.append((
                     line_num,
-                    "print() call in production code "
-                    "— use logger.info() or logger.debug() instead",
+                    "print() call in production code — use logger.info() or logger.debug() instead",
                 ))
 
         self.generic_visit(node)
@@ -94,11 +98,7 @@ class UnstructuredLoggingVisitor(ast.NodeVisitor):
 
     def visit_Call(self, node: ast.Call) -> None:
         """Detect string formatting in logger method calls."""
-        if (
-            isinstance(node.func, ast.Attribute)
-            and node.func.attr in _LOGGER_METHODS
-            and node.args
-        ):
+        if isinstance(node.func, ast.Attribute) and node.func.attr in _LOGGER_METHODS and node.args:
             first_arg = node.args[0]
             line_num = node.lineno
 
@@ -176,17 +176,11 @@ def is_allowed_location(file_path: Path) -> bool:
         return True
 
     # Allow in scripts and tools
-    if any(
-        marker in path_str
-        for marker in ["scripts/", "/tools/", "/_tools/"]
-    ):
+    if any(marker in path_str for marker in ["scripts/", "/tools/", "/_tools/"]):
         return True
 
     # Allow in __main__.py and CLI entry points
-    if file_path.name in ("__main__.py", "cli.py", "main.py"):
-        return True
-
-    return False
+    return file_path.name in ("__main__.py", "cli.py", "main.py")
 
 
 def main(filenames: list[str]) -> int:

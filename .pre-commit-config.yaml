@@ -1,0 +1,47 @@
+# Run with:     uvx pre-commit run --all-files
+# Install hooks: uvx pre-commit install
+#
+# This repo is a Claude Code plugin, not a Python package: most of strictify's
+# own 22 categories don't apply here (no package, no tests, no runtime). This
+# config is the sensible subset that does -- repo-agnostic hygiene, ruff scoped
+# to the plugin's own hook scripts, and a guard on the load-bearing category
+# count. See ARCHITECTURE.md.
+
+repos:
+  # Standard file hygiene -- cheap, repo-agnostic, always worth it.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-added-large-files
+
+  # Ruff -- lint + format, scoped to the plugin's own hook scripts (the only
+  # .py in the repo). Config lives in ruff.toml and mirrors the strict config
+  # strictify ships to target repos.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.4
+    hooks:
+      - id: ruff-check
+        args: [--fix, --quiet]
+        files: ^skills/strictify/scripts/
+      - id: ruff-format
+        args: [--quiet]
+        files: ^skills/strictify/scripts/
+
+  # Local guards.
+  - repo: local
+    hooks:
+      # The "N categories" count is duplicated across SKILL.md, README.md, and
+      # both plugin manifests. This fails if they drift out of sync.
+      - id: check-category-count
+        name: Check category count consistency
+        entry: python3 tools/check_category_count.py
+        language: system
+        pass_filenames: false
+        always_run: true

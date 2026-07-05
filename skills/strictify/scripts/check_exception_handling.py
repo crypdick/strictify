@@ -68,9 +68,7 @@ class ExceptionHandlerVisitor(ast.NodeVisitor):
 
             # Check if it only has pass or continue
             is_only_pass = len(node.body) == 1 and isinstance(node.body[0], ast.Pass)
-            is_only_continue = len(node.body) == 1 and isinstance(
-                node.body[0], ast.Continue
-            )
+            is_only_continue = len(node.body) == 1 and isinstance(node.body[0], ast.Continue)
 
             if is_only_pass:
                 self.violations.append((
@@ -92,8 +90,7 @@ class ExceptionHandlerVisitor(ast.NodeVisitor):
                     isinstance(stmt, ast.Expr)
                     and isinstance(stmt.value, ast.Call)
                     and isinstance(stmt.value.func, ast.Attribute)
-                    and stmt.value.func.attr
-                    in ("error", "warning", "exception", "critical", "debug", "info")
+                    and stmt.value.func.attr in ("error", "warning", "exception", "critical", "debug", "info")
                     for stmt in node.body
                 )
 

@@ -142,11 +142,7 @@ def _iter_target_files(repo_root: Path, argv: list[str]) -> list[Path]:
     if argv:
         out: list[Path] = []
         for raw in argv:
-            p = (
-                (repo_root / raw).resolve()
-                if not Path(raw).is_absolute()
-                else Path(raw).resolve()
-            )
+            p = (repo_root / raw).resolve() if not Path(raw).is_absolute() else Path(raw).resolve()
             try:
                 p.relative_to(repo_root)
             except ValueError:
@@ -180,9 +176,7 @@ def main(argv: list[str]) -> int:
             if _fix_file(p):
                 changed.append(p)
         except (OSError, UnicodeDecodeError) as e:
-            print(
-                f"{p}:1: error processing file — {e}"
-            )
+            print(f"{p}:1: error processing file — {e}")
             return 2
 
     if changed:
