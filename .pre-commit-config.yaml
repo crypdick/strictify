@@ -3,9 +3,9 @@
 #
 # This repo is a Claude Code plugin, not a Python package: most of strictify's
 # own 22 categories don't apply here (no package, no tests, no runtime). This
-# config is the sensible subset that does -- repo-agnostic hygiene, ruff scoped
-# to the plugin's own hook scripts, and a guard on the load-bearing category
-# count. See ARCHITECTURE.md.
+# config is the sensible subset that does -- repo-agnostic hygiene, ruff and mypy
+# scoped to the plugin's own hook scripts, and a guard on the load-bearing
+# category count. See ARCHITECTURE.md.
 
 repos:
   # Standard file hygiene -- cheap, repo-agnostic, always worth it.
@@ -20,6 +20,8 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
       - id: check-added-large-files
+      - id: debug-statements
+      - id: mixed-line-ending
 
   # Ruff -- lint + format, scoped to the plugin's own hook scripts (the only
   # .py in the repo). Config lives in ruff.toml and mirrors the strict config
@@ -32,6 +34,17 @@ repos:
         files: ^skills/strictify/scripts/
       - id: ruff-format
         args: [--quiet]
+        files: ^skills/strictify/scripts/
+
+  # mypy -- strict static typing, scoped to the plugin's own hook scripts (same
+  # scope as ruff above). Config lives in mypy.ini. The scripts are payloads
+  # shipped to target repos, so they hold to the strictest form of the type bar
+  # strictify enforces elsewhere.
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.17.0
+    hooks:
+      - id: mypy
+        args: [--config-file, mypy.ini]
         files: ^skills/strictify/scripts/
 
   # Local guards.

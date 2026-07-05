@@ -71,7 +71,7 @@ def extract_comments(file_path: Path) -> list[tuple[int, str]]:
     try:
         with open(file_path, encoding="utf-8") as f:
             in_docstring = False
-            docstring_delimiter = None
+            docstring_delimiter: str | None = None
 
             for line_num, line in enumerate(f, start=1):
                 stripped = line.strip()
@@ -79,7 +79,7 @@ def extract_comments(file_path: Path) -> list[tuple[int, str]]:
                 # Handle docstrings
                 if in_docstring:
                     comments.append((line_num, line))
-                    if docstring_delimiter in line:
+                    if docstring_delimiter is not None and docstring_delimiter in line:
                         in_docstring = False
                 elif stripped.startswith('"""') or stripped.startswith("'''"):
                     docstring_delimiter = '"""' if stripped.startswith('"""') else "'''"

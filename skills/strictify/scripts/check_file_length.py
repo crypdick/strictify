@@ -28,7 +28,7 @@ from pathlib import Path
 class LogicalLineCounter(ast.NodeVisitor):
     """Counts logical lines of code, ignoring docstrings and comments."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.docstring_lines: set[int] = set()
 
     def visit_Expr(self, node: ast.Expr) -> None:
