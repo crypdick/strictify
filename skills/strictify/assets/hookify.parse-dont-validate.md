@@ -34,4 +34,6 @@ def process(request: UserRequest) -> None:
 
 Use Pydantic models, frozen dataclasses, or `NewType` to carry proof through the type system. Parse at the boundary, execute with confidence downstream.
 
+The same boundary applies to untyped third-party clients (SDKs, HTTP responses, DB rows): wrap them in a thin typed adapter that parses their loose `dict`/`Any` output into your own constrained types, so the weak types stop at the edge instead of leaking through the codebase.
+
 If this is internal code operating on already-parsed types, ignore this message.

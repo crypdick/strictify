@@ -27,6 +27,11 @@ Or add to `~/.claude/settings.json`:
 
 ## What it does
 
+Strictify ships two kinds of enforcement, and most categories blend both:
+
+- **Pre-baked opinionated configs and scripts** — ruff/mypy/pytest/coverage settings, the pre-commit template, and self-contained hook scripts that drop into any repo unchanged.
+- **Adaptable agent directives** — instructions that direct the agent to apply a *principle* to the specifics of your repo (its layers, its services, its worktree isolation needs) rather than copy a fixed artifact. When the right answer varies case by case, strictify hands the agent the essence and lets it build what fits — it does not hardcode stack-specific instructions (no baked-in OpenAPI/Postgres/Kysely recipes).
+
 `/strictify` runs a three-phase workflow:
 
 1. **Analyze** — scans pyproject.toml, pre-commit config, package layout, Python version, package manager, test setup, beartype, domain structure

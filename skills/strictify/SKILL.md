@@ -14,6 +14,7 @@ The approach is inspired by the "AI Is Forcing Us to Write Good Code" thesis and
 ## Philosophy
 
 - **Enforce taste, not arbitrary strictness** -- every rule exists because it improves code quality
+- **Fit before force** -- these categories are a menu of good patterns, not a checklist to apply wholesale. Not every pattern suits every repo, so first read the target and judge whether each directive even makes sense for its size, stack, domain, and maturity; skip or soften what does not earn its place (no architectural-layer lint rules for a 200-line script, no third-party-call caching for an offline library, no per-worktree isolation for a repo with no shared services). Then bias strict on what remains.
 - **Bias for strict, but check in** -- propose aggressive defaults, let the user veto
 - **Self-reinforcing** -- hookify rules capture new taste preferences during normal work
 - **Parse, don't validate** -- coerce at the boundary, carry proof through types
@@ -37,7 +38,7 @@ Scan the target repo to understand its current state. Check all of the following
 
 ## Phase 2: Propose
 
-Present findings grouped by the 6 category groups below. For each category, show: **current state -> proposed change**. Ask the user to veto any categories they do not want. Default is to apply everything -- the user opts OUT, not in.
+First, use the Phase 1 analysis to filter to the categories that actually fit this repo (see *Fit before force*), setting aside the rest with a brief reason. Then present the remaining findings grouped by the 6 category groups below. For each category, show: **current state -> proposed change**. Ask the user to veto any categories they do not want. Within the relevant set, default is to apply everything -- the user opts OUT, not in.
 
 ### Static Analysis & Type Safety (categories 1-6)
 
@@ -58,19 +59,19 @@ Present findings grouped by the 6 category groups below. For each category, show
 ### Testing & Coverage (categories 11-12)
 
 11. **Coverage enforcement** -- `fail_under = 100`. Coverage report as explicit todo list. Curated `exclude_lines` for `TYPE_CHECKING`, `@abstractmethod`, `__repr__`, and other pragmatic exclusions. Read `references/pyproject-strict.md` for the full exclusion list.
-12. **Fast test infrastructure** -- pytest-xdist parallel execution, test timeouts, `--failed-first` for fast feedback. Read `references/pyproject-strict.md` for pytest `addopts` config.
+12. **Fast test infrastructure** -- pytest-xdist parallel execution, test timeouts, `--failed-first` for fast feedback. Read `references/pyproject-strict.md` for pytest `addopts` config. Separately, *only if the tests make real third-party/external calls* (HTTP APIs, SDKs, network services -- the usual source of slow, flaky suites): propose a record-replay layer (`vcrpy`/`pytest-recording`, `respx` for httpx, or `responses` for requests) that records real responses once and replays them on later runs. A recorded response assumes the third party is a pure function of the request, so pair it with a CI job that re-runs the suite *without* the recordings after PR approval, to catch where that assumption breaks.
 
 ### Architecture & Organization (categories 13-16)
 
 13. **Filesystem discipline** -- file length limits (400 lines). Hookify rule warning on `utils.py`/`helpers.py`/`misc.py` creation. The problem is not shared code -- it is anonymous shared code. If a shared utility is needed, name it after what it does.
 14. **Architecture codemap** -- create `docs/ARCHITECTURE.md`: a short bird's-eye map that tells a newcomer (human or agent) *where* things live, not *how* they work. Include a one-paragraph statement of the problem the codebase solves, a codemap of the coarse-grained modules/packages and how they relate, and the load-bearing architectural invariants -- including things deliberately *absent* (e.g. "the domain layer never imports Django"). Name important files, modules, and types explicitly so they are greppable. Keep it short and do not link to specific lines (links rot); it is a mental model, not an index. This is the primary agent-legibility artifact -- valuable for every project regardless of size. Revisit it a couple of times a year rather than syncing it to every change.
-15. **Architectural layer enforcement** -- analyze the project's domain structure and propose dependency-direction rules. For a Django project: models -> services -> views -> urls. For a CLI tool: parsing -> domain -> output. For a data pipeline: extract -> transform -> load. Figure out the appropriate layers for the target project, create custom lint rules enforcing valid dependency edges, and record the layers and their invariants in the `docs/ARCHITECTURE.md` codemap (category 14). Keep constraints lightweight for small projects, more rigid for larger ones. Skip the lint rules for projects too small to warrant them -- the codemap still applies.
+15. **Architectural layer enforcement** -- analyze the project's domain structure and propose dependency-direction rules. For a Django project: models -> services -> views -> urls. For a CLI tool: parsing -> domain -> output. For a data pipeline: extract -> transform -> load. Figure out the appropriate layers for the target project, create custom lint rules enforcing valid dependency edges, and record the layers and their invariants in the `docs/ARCHITECTURE.md` codemap (category 14). Scale to project size: lightweight or no lint rules for small projects (the category-14 codemap still applies), more rigid for larger ones.
 16. **Quality grades** -- create `docs/QUALITY.md` scorecard grading each module/domain on coverage, type safety, complexity, and test health. Assess the current state, produce initial grades, and include guidance on how to maintain and update the scorecard over time.
 
 ### Environment & Infrastructure (categories 17-18)
 
-17. **Ephemeral environment** -- if uv detected, ensure `uv run` works as single-command entry. Add bootstrap script or documentation as needed.
-18. **Per-worktree isolation** -- analyze what isolation means for the specific project (configurable ports, separate DB names, isolated caches). For simple projects this may just be confirming `uv run` works from any worktree. For complex ones it may involve environment variable templating or a dev setup script.
+17. **Ephemeral environment** -- the goal is a *single command* that stands up a fresh, ready-to-work dev environment -- create a git worktree, copy local-only config (`.env`, credentials, editor settings), install dependencies, hand off to the agent -- fast enough (seconds, not minutes) to make concurrent agents in separate worktrees practical. Build the version that fits the target: for a uv project with no services, a thin `new-feature <name>` script wrapping `git worktree add` + `uv sync` + `.env` copy; for a heavier stack, whatever else it needs to boot. Adapt the essence (one command, ephemeral, automated) to the repo rather than shipping a fixed script.
+18. **Per-worktree isolation** -- worktrees must not collide when several run at once. **The rule: any state at a fixed shared location must be keyed per-worktree** -- ports, database/schema names, caches on hardcoded paths (`/tmp/myapp-cache`, `~/.cache/myapp`), and shared service instances (redis db numbers, queue names). Derive each from the worktree (an offset or hash of its name) via environment variables, or concurrent worktrees clobber each other. The exception is content-addressed global caches (`~/.cache/uv`, pip wheels): keyed by content hash, so sharing them is safe -- leave them alone. A project with no shared state may just need `uv run` to work from any worktree; a complex one should template the isolating env vars into the category-17 setup command so isolation is automatic, not manual. With containers, isolation may mean per-worktree Docker compose project names or volumes.
 
 ### Ongoing Enforcement (categories 19-22)
 
