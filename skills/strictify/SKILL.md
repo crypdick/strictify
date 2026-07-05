@@ -7,7 +7,7 @@ description: This skill should be used when the user asks to "strictify a repo",
 
 ## Overview
 
-This skill enforces taste programmatically across 21 categories of Python code quality. It analyzes an existing repository (or bootstraps a new one), proposes strict-but-pragmatic defaults across static analysis, type safety, testing, architecture, and ongoing enforcement, then applies approved changes. Every rule exists because it improves code quality, not because a linter supports it.
+This skill enforces taste programmatically across 22 categories of Python code quality. It analyzes an existing repository (or bootstraps a new one), proposes strict-but-pragmatic defaults across static analysis, type safety, testing, architecture, and ongoing enforcement, then applies approved changes. Every rule exists because it improves code quality, not because a linter supports it.
 
 The approach is inspired by the "AI Is Forcing Us to Write Good Code" thesis and OpenAI's "Harness Engineering" insight: AI agents amplify whatever quality level a codebase already has. The only guardrails are the ones that get set and enforced. The tooling, abstractions, and feedback loops that keep a codebase coherent are the primary leverage point. Agent legibility -- making code navigable by both humans and AI agents -- is a first-class goal alongside human readability.
 
@@ -60,23 +60,24 @@ Present findings grouped by the 6 category groups below. For each category, show
 11. **Coverage enforcement** -- `fail_under = 100`. Coverage report as explicit todo list. Curated `exclude_lines` for `TYPE_CHECKING`, `@abstractmethod`, `__repr__`, and other pragmatic exclusions. Read `references/pyproject-strict.md` for the full exclusion list.
 12. **Fast test infrastructure** -- pytest-xdist parallel execution, test timeouts, `--failed-first` for fast feedback. Read `references/pyproject-strict.md` for pytest `addopts` config.
 
-### Architecture & Organization (categories 13-15)
+### Architecture & Organization (categories 13-16)
 
 13. **Filesystem discipline** -- file length limits (400 lines). Hookify rule warning on `utils.py`/`helpers.py`/`misc.py` creation. The problem is not shared code -- it is anonymous shared code. If a shared utility is needed, name it after what it does.
-14. **Architectural layer enforcement** -- analyze the project's domain structure and propose dependency direction rules. For a Django project: models -> services -> views -> urls. For a CLI tool: parsing -> domain -> output. For a data pipeline: extract -> transform -> load. Figure out the appropriate layers for the target project, create custom lint rules enforcing valid dependency edges, and document the architecture in `docs/ARCHITECTURE.md`. Keep constraints lightweight for small projects, more rigid for larger ones.
-15. **Quality grades** -- create `docs/QUALITY.md` scorecard grading each module/domain on coverage, type safety, complexity, and test health. Assess the current state, produce initial grades, and include guidance on how to maintain and update the scorecard over time.
+14. **Architecture codemap** -- create `docs/ARCHITECTURE.md`: a short bird's-eye map that tells a newcomer (human or agent) *where* things live, not *how* they work. Include a one-paragraph statement of the problem the codebase solves, a codemap of the coarse-grained modules/packages and how they relate, and the load-bearing architectural invariants -- including things deliberately *absent* (e.g. "the domain layer never imports Django"). Name important files, modules, and types explicitly so they are greppable. Keep it short and do not link to specific lines (links rot); it is a mental model, not an index. This is the primary agent-legibility artifact -- valuable for every project regardless of size. Revisit it a couple of times a year rather than syncing it to every change.
+15. **Architectural layer enforcement** -- analyze the project's domain structure and propose dependency-direction rules. For a Django project: models -> services -> views -> urls. For a CLI tool: parsing -> domain -> output. For a data pipeline: extract -> transform -> load. Figure out the appropriate layers for the target project, create custom lint rules enforcing valid dependency edges, and record the layers and their invariants in the `docs/ARCHITECTURE.md` codemap (category 14). Keep constraints lightweight for small projects, more rigid for larger ones. Skip the lint rules for projects too small to warrant them -- the codemap still applies.
+16. **Quality grades** -- create `docs/QUALITY.md` scorecard grading each module/domain on coverage, type safety, complexity, and test health. Assess the current state, produce initial grades, and include guidance on how to maintain and update the scorecard over time.
 
-### Environment & Infrastructure (categories 16-17)
+### Environment & Infrastructure (categories 17-18)
 
-16. **Ephemeral environment** -- if uv detected, ensure `uv run` works as single-command entry. Add bootstrap script or documentation as needed.
-17. **Per-worktree isolation** -- analyze what isolation means for the specific project (configurable ports, separate DB names, isolated caches). For simple projects this may just be confirming `uv run` works from any worktree. For complex ones it may involve environment variable templating or a dev setup script.
+17. **Ephemeral environment** -- if uv detected, ensure `uv run` works as single-command entry. Add bootstrap script or documentation as needed.
+18. **Per-worktree isolation** -- analyze what isolation means for the specific project (configurable ports, separate DB names, isolated caches). For simple projects this may just be confirming `uv run` works from any worktree. For complex ones it may involve environment variable templating or a dev setup script.
 
-### Ongoing Enforcement (categories 18-21)
+### Ongoing Enforcement (categories 19-22)
 
-18. **Custom hooks** -- exception handling (`check_exception_handling.py`), print/logging bans (`check_print_statements.py`), timeless comments (`check_timeless_comments.py`), future annotations (`fix_future_annotations.py`), and tests-verify-public-behaviour (`check_private_test_imports.py`, which forbids tests from importing leading-underscore first-party symbols so they exercise the public surface instead of internal shape). Read each script from `scripts/` to understand behavior and adapt to the target repo.
-19. **Hygiene hooks** -- trailing whitespace, end-of-file-fixer, large files, merge conflicts, debug statements, private key detection, plus `detect-secrets` for entropy-based secret scanning. Standard pre-commit hooks from the pre-commit-hooks repo and `Yelp/detect-secrets`. **Out of scope:** personal/prod strings (internal hostnames, real usernames, prod URLs). Any mechanism for these either commits the pattern (defeating the point) or requires per-user config strictify cannot bootstrap -- users who care should add a local hook that reads patterns from a gitignored file.
-20. **Doc gardening** -- detect stale documentation that does not reflect actual code behavior. Set up infrastructure appropriate to the project's maturity: a pre-commit hook, a CI job, or guidance for a recurring agent task that scans for drift and opens fix-up PRs. Pair with the `doc-code-coupling` hookify rule that reminds authors to leave `NOTE:` back-pointers at code sites whose values are documented elsewhere.
-21. **Taste enforcer** -- hookify rule that captures ongoing user preferences. When the user expresses a coding preference, determine whether it can be codified as a pre-commit hook script, a hookify rule, or a pyproject.toml setting, then create or update the enforcement mechanism.
+19. **Custom hooks** -- exception handling (`check_exception_handling.py`), print/logging bans (`check_print_statements.py`), timeless comments (`check_timeless_comments.py`), future annotations (`fix_future_annotations.py`), and tests-verify-public-behaviour (`check_private_test_imports.py`, which forbids tests from importing leading-underscore first-party symbols so they exercise the public surface instead of internal shape). Read each script from `scripts/` to understand behavior and adapt to the target repo.
+20. **Hygiene hooks** -- trailing whitespace, end-of-file-fixer, large files, merge conflicts, debug statements, private key detection, plus `detect-secrets` for entropy-based secret scanning. Standard pre-commit hooks from the pre-commit-hooks repo and `Yelp/detect-secrets`. **Out of scope:** personal/prod strings (internal hostnames, real usernames, prod URLs). Any mechanism for these either commits the pattern (defeating the point) or requires per-user config strictify cannot bootstrap -- users who care should add a local hook that reads patterns from a gitignored file.
+21. **Doc gardening** -- detect stale documentation that does not reflect actual code behavior. Set up infrastructure appropriate to the project's maturity: a pre-commit hook, a CI job, or guidance for a recurring agent task that scans for drift and opens fix-up PRs. Pair with the `doc-code-coupling` hookify rule that reminds authors to leave `NOTE:` back-pointers at code sites whose values are documented elsewhere.
+22. **Taste enforcer** -- hookify rule that captures ongoing user preferences. When the user expresses a coding preference, determine whether it can be codified as a pre-commit hook script, a hookify rule, or a pyproject.toml setting, then create or update the enforcement mechanism.
 
 ## Phase 3: Apply
 
@@ -104,9 +105,10 @@ Detect the package manager and run the appropriate install command:
 ### Infrastructure setup
 
 - Run `pre-commit install` to activate hooks.
-- **Architecture**: analyze domain structure, create `docs/ARCHITECTURE.md` with layer definitions and dependency rules.
+- **Architecture codemap**: create `docs/ARCHITECTURE.md` -- a short bird's-eye problem statement, a codemap of the coarse-grained modules and how they relate, and the load-bearing invariants (including deliberate absences). Name entities so they are greppable; do not link to specific lines.
+- **Architectural layers**: if the project warrants it, add dependency-direction lint rules and record the layers in the codemap.
 - **Quality scorecard**: create `docs/QUALITY.md` with initial grades per module.
-- **Doc gardening**: set up stale-docs detection appropriate to project maturity.
+- **Doc gardening**: set up stale-docs detection appropriate to project maturity; put `docs/ARCHITECTURE.md` on a "revisit a couple times a year" cadence rather than gating every change on it.
 - **Per-worktree**: configure if applicable (ports, DBs, caches).
 
 ## Conflict Handling

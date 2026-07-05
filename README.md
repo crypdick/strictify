@@ -40,7 +40,7 @@ Or add to `~/.claude/settings.json`:
 | **Static Analysis & Type Safety** | Pre-commit framework, Ruff, mypy strict, Beartype, Semantic typing (NewType), Parse-don't-validate |
 | **Code Health** | Vulture (dead code), Xenon (complexity), Pyupgrade + Flynt, Structured logging |
 | **Testing & Coverage** | Coverage `fail_under=100`, Fast tests (xdist, timeouts, --failed-first), Red/green TDD agent directive |
-| **Architecture & Organization** | File length limits, Architectural layers, Quality scorecard |
+| **Architecture & Organization** | File length limits, Architecture codemap (ARCHITECTURE.md), Architectural layers, Quality scorecard |
 | **Environment & Infrastructure** | Ephemeral environments, Per-worktree isolation |
 | **Ongoing Enforcement** | Custom hooks, Hygiene hooks, Doc gardening, Taste enforcer |
 
