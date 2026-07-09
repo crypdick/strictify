@@ -40,7 +40,7 @@ _LOGGER_METHODS = frozenset({
 class PrintStatementVisitor(ast.NodeVisitor):
     """AST visitor to find ``print()`` calls."""
 
-    def __init__(self, filename: str, file_content: str):
+    def __init__(self, filename: str, file_content: str) -> None:
         self.filename = filename
         self.file_content = file_content
         self.violations: list[tuple[int, str]] = []
@@ -83,7 +83,7 @@ class UnstructuredLoggingVisitor(ast.NodeVisitor):
     - ``logger.info(f"user: {user_id}")``    (f-string formatting)
     """
 
-    def __init__(self, filename: str, file_content: str):
+    def __init__(self, filename: str, file_content: str) -> None:
         self.filename = filename
         self.file_content = file_content
         self.lines = file_content.splitlines()
@@ -110,18 +110,22 @@ class UnstructuredLoggingVisitor(ast.NodeVisitor):
             if isinstance(first_arg, ast.BinOp) and isinstance(first_arg.op, ast.Add):
                 self.violations.append((
                     line_num,
-                    "String concatenation in logger call "
-                    "— use structured logging instead: "
-                    "logger.info('event description', extra={'key': value})",
+                    (
+                        "String concatenation in logger call "
+                        "— use structured logging instead: "
+                        "logger.info('event description', extra={'key': value})"
+                    ),
                 ))
 
             # Detect f-string: logger.info(f"msg: {val}")
             elif isinstance(first_arg, ast.JoinedStr):
                 self.violations.append((
                     line_num,
-                    "f-string formatting in logger call "
-                    "— use structured logging instead: "
-                    "logger.info('event description', extra={'key': value})",
+                    (
+                        "f-string formatting in logger call "
+                        "— use structured logging instead: "
+                        "logger.info('event description', extra={'key': value})"
+                    ),
                 ))
 
         self.generic_visit(node)
@@ -139,12 +143,12 @@ def check_print_statements(file_path: Path) -> list[tuple[int, str]]:
         visitor = PrintStatementVisitor(str(file_path), content)
         visitor.visit(tree)
 
-        return visitor.violations
-
     except SyntaxError:
         return []
     except UnicodeDecodeError:
         return []
+    else:
+        return visitor.violations
 
 
 def check_unstructured_logging(file_path: Path) -> list[tuple[int, str]]:
@@ -159,12 +163,12 @@ def check_unstructured_logging(file_path: Path) -> list[tuple[int, str]]:
         visitor = UnstructuredLoggingVisitor(str(file_path), content)
         visitor.visit(tree)
 
-        return visitor.violations
-
     except SyntaxError:
         return []
     except UnicodeDecodeError:
         return []
+    else:
+        return visitor.violations
 
 
 def is_allowed_location(file_path: Path) -> bool:

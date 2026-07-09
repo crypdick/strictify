@@ -26,7 +26,7 @@ from pathlib import Path
 class ExceptionHandlerVisitor(ast.NodeVisitor):
     """AST visitor to find problematic exception handlers."""
 
-    def __init__(self, filename: str, file_content: str):
+    def __init__(self, filename: str, file_content: str) -> None:
         self.filename = filename
         self.file_content = file_content
         self.lines = file_content.splitlines()
@@ -57,9 +57,11 @@ class ExceptionHandlerVisitor(ast.NodeVisitor):
             self.violations.append((
                 line_num,
                 "bare_except",
-                "Bare 'except:' clause catches all exceptions including "
-                "KeyboardInterrupt — catch a specific exception type instead "
-                "(e.g., except ValueError as e:)",
+                (
+                    "Bare 'except:' clause catches all exceptions including "
+                    "KeyboardInterrupt — catch a specific exception type instead "
+                    "(e.g., except ValueError as e:)"
+                ),
             ))
         # Check for except Exception:
         elif isinstance(node.type, ast.Name) and node.type.id == "Exception":
@@ -74,15 +76,19 @@ class ExceptionHandlerVisitor(ast.NodeVisitor):
                 self.violations.append((
                     line_num,
                     "exception_pass",
-                    "Exception handler with only 'pass' swallows all errors "
-                    "— log the error and re-raise, or catch a narrower type",
+                    (
+                        "Exception handler with only 'pass' swallows all errors "
+                        "— log the error and re-raise, or catch a narrower type"
+                    ),
                 ))
             elif is_only_continue:
                 self.violations.append((
                     line_num,
                     "exception_continue",
-                    "Exception handler with only 'continue' swallows all errors "
-                    "— log the error and re-raise, or catch a narrower type",
+                    (
+                        "Exception handler with only 'continue' swallows all errors "
+                        "— log the error and re-raise, or catch a narrower type"
+                    ),
                 ))
             elif not has_raise:
                 # Only flag if there's no logging or other meaningful action
@@ -98,8 +104,10 @@ class ExceptionHandlerVisitor(ast.NodeVisitor):
                     self.violations.append((
                         line_num,
                         "broad_exception",
-                        "Broad 'except Exception' without logging or re-raising "
-                        "— catch a specific exception or add logger.exception()",
+                        (
+                            "Broad 'except Exception' without logging or re-raising "
+                            "— catch a specific exception or add logger.exception()"
+                        ),
                     ))
 
         self.generic_visit(node)
@@ -117,14 +125,14 @@ def check_exception_handling(file_path: Path) -> list[tuple[int, str, str]]:
         visitor = ExceptionHandlerVisitor(str(file_path), content)
         visitor.visit(tree)
 
-        return visitor.violations
-
     except SyntaxError:
         # Skip files with syntax errors (will be caught by other tools)
         return []
     except UnicodeDecodeError:
         # Skip binary files
         return []
+    else:
+        return visitor.violations
 
 
 def main(filenames: list[str]) -> int:

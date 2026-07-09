@@ -18,21 +18,38 @@ Ruff replaces flake8, isort, pyupgrade, and black in a single fast tool.
   strict repos should catch issues early, and preview rules rarely produce false positives
   in well-typed codebases.
 - The `select` list covers the highest-signal anti-slop rule families for
-  agent-managed repos: builtin shadowing (`A`), unused arguments (`ARG`), async
-  footguns (`ASYNC`), blind exceptions (`BLE`), naive datetimes (`DTZ`),
-  commented-out code (`ERA`), future annotations (`FA`), boolean-trap APIs (`FBT`),
-  logging hygiene (`G`, `LOG`), naming (`N`), precise suppressions (`PGH`),
-  cleanup rules (`PIE`, `RET`, `RSE`), targeted Pylint checks (`PLC`, `PLE`,
-  `PLW`, selected `PLR`), pytest style (`PT`), pathlib (`PTH`), security footguns
-  (`S`), private-member access (`SLF`), debugger/print bans (`T10`, `T20`),
+  agent-managed repos: builtin shadowing (`A`), explicit annotations (`ANN`),
+  unused arguments (`ARG`), async footguns (`ASYNC`), blind exceptions (`BLE`),
+  bare-tuple comma bugs (`COM818`), naive datetimes (`DTZ`), commented-out code
+  (`ERA`), executable-script hygiene (`EXE`), future annotations (`FA`),
+  boolean-trap APIs (`FBT`), targeted refurb checks (`FURB`), logging hygiene
+  (`G`, `LOG`), package initialization (`INP`), collection string-concat bugs
+  (`ISC004`), naming (`N`), performance/readability (`PERF`), precise
+  suppressions (`PGH`), cleanup rules (`PIE`, `RET`, `RSE`), targeted Pylint
+  checks (`PLC`, `PLE`, `PLW`, selected `PLR`), pytest style (`PT`), pathlib
+  (`PTH`), security footguns (`S`), private-member access (`SLF`), slots on
+  builtin subclasses (`SLOT`), debugger/print bans (`T10`, `T20`),
   type-checking imports (`TC`), import boundaries (`TID`), targeted exception
-  rules (`TRY004`, `TRY201`, `TRY203`, `TRY400`, `TRY401`), and Python-version
-  traps (`YTT`).
+  rules (`TRY004`, `TRY201`, `TRY203`, `TRY300`, `TRY400`, `TRY401`), and
+  Python-version traps (`YTT`).
 - `C90` enables Ruff's mccabe `C901` cyclomatic-complexity check, so complexity
   enforcement stays inside the normal Ruff pass.
 - `DOC102`, `DOC202`, and `DOC403` catch stale docstring sections after refactors
-  without requiring docstrings everywhere. Do not enable broad `D` or `DOC` by
-  default: agents respond to missing-docstring gates by writing low-value filler.
+  without requiring docstrings everywhere. Selected `D` rules catch empty or
+  structurally misleading docstrings without forcing filler documentation. Do
+  not enable broad `D` or `DOC` by default: agents respond to missing-docstring
+  gates by writing low-value filler.
+- `ANN401` is intentionally strict. Prefer parsing untrusted input at boundaries
+  into domain models, `TypedDict`s, `Protocol`s, or `object` plus narrowing. Use
+  a narrow `# noqa: ANN401` only when a boundary is genuinely dynamic and cannot
+  be typed honestly.
+- This supports the parse-don't-validate convention: coerce unstructured data
+  into constrained types at system boundaries so downstream code carries stronger
+  type evidence instead of repeatedly re-validating raw `Any` blobs. See
+  <https://www.ricardodecal.com/opinions/parse-don-t-validate-in-python/>.
+- Do not enable broad `COM`, `Q`, or formatter-conflicting `ISC` settings while
+  using Ruff format. The selected comma and implicit-concat rules are bug-shaped,
+  not formatting policy.
 - `ignore = ["E501", "TRY003"]` defers line-length enforcement to the formatter
   and avoids exception-class ceremony for simple domain errors.
 
@@ -44,34 +61,77 @@ preview = true
 [tool.ruff.lint]
 select = [
     "A",
+    "ANN001",
+    "ANN002",
+    "ANN003",
+    "ANN201",
+    "ANN202",
+    "ANN204",
+    "ANN205",
+    "ANN206",
+    "ANN401",
     "ARG",
     "ASYNC",
     "B",
     "BLE",
     "C4",
+    "COM818",
     "C90",
+    "D402",
+    "D414",
+    "D418",
+    "D419",
     "DOC102",
     "DOC202",
     "DOC403",
     "DTZ",
     "E",
     "ERA",
+    "EXE",
     "F",
     "FA",
     "FBT",
+    "FURB101",
+    "FURB103",
+    "FURB122",
+    "FURB129",
+    "FURB132",
+    "FURB157",
+    "FURB161",
+    "FURB162",
+    "FURB168",
+    "FURB169",
+    "FURB171",
+    "FURB177",
+    "FURB181",
+    "FURB188",
     "G",
     "I",
+    "INP",
+    "ISC004",
     "LOG",
     "N",
+    "PERF",
     "PGH",
     "PIE",
     "PLC",
     "PLE",
+    "PLR0124",
+    "PLR0133",
+    "PLR0206",
     "PLR0911",
     "PLR0912",
     "PLR0913",
     "PLR0915",
     "PLR1702",
+    "PLR1704",
+    "PLR1711",
+    "PLR1714",
+    "PLR1716",
+    "PLR1722",
+    "PLR1733",
+    "PLR1736",
+    "PLR5501",
     "PLW",
     "PT",
     "PTH",
@@ -81,6 +141,7 @@ select = [
     "S",
     "SIM",
     "SLF",
+    "SLOT",
     "T10",
     "T20",
     "TC",
@@ -88,6 +149,7 @@ select = [
     "TRY004",
     "TRY201",
     "TRY203",
+    "TRY300",
     "TRY400",
     "TRY401",
     "UP",
@@ -128,7 +190,7 @@ max-complexity = 15
 
 ```toml
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["ARG", "C901", "FBT", "F841", "PLR0912", "PLR0913", "PLR0915", "S101", "SLF"]
+"tests/**/*.py" = ["ANN", "ARG", "C901", "FBT", "F841", "PLR0912", "PLR0913", "PLR0915", "S101", "SLF"]
 "scripts/**/*.py" = ["C901", "PLR0912", "PLR0915", "S603", "S607", "T20"]
 ```
 

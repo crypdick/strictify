@@ -93,9 +93,11 @@ def check_file_length(filepath: Path, max_lines: int) -> tuple[int, str] | None:
     if lloc > max_lines:
         return (
             lloc,
-            f"File has {lloc} logical lines (limit {max_lines}) "
-            f"— split into smaller, focused modules "
-            f"(e.g., extract helpers, constants, or a sub-package)",
+            (
+                f"File has {lloc} logical lines (limit {max_lines}) "
+                f"— split into smaller, focused modules "
+                f"(e.g., extract helpers, constants, or a sub-package)"
+            ),
         )
     return None
 

@@ -77,7 +77,7 @@ def detect_first_party_packages(root: Path) -> set[str]:
 class PrivateImportVisitor(ast.NodeVisitor):
     """AST visitor flagging imports of private first-party symbols."""
 
-    def __init__(self, file_content: str, first_party: set[str]):
+    def __init__(self, file_content: str, first_party: set[str]) -> None:
         self.lines = file_content.splitlines()
         self.first_party = first_party
         self.violations: list[tuple[int, str, str]] = []
