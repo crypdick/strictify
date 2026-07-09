@@ -18,8 +18,13 @@ Ruff replaces flake8, isort, pyupgrade, and black in a single fast tool.
   strict repos should catch issues early, and preview rules rarely produce false positives
   in well-typed codebases.
 - The `select` list covers the most impactful rule families without being exhaustive.
-  Add `"PLC"` and `"C90"` if the project has complexity concerns. Add `"UP"` if the
-  project hasn't yet been modernized to the target Python version.
+  `C90` enables Ruff's mccabe `C901` cyclomatic-complexity check, so complexity
+  enforcement stays inside the normal Ruff pass. Add `"PLC"` if the project has
+  Pylint-style convention concerns. Add `"UP"` if the project hasn't yet been
+  modernized to the target Python version.
+- `DOC102`, `DOC202`, and `DOC403` catch stale docstring sections after refactors
+  without requiring docstrings everywhere. Do not enable broad `D` or `DOC` by
+  default: agents respond to missing-docstring gates by writing low-value filler.
 - `ignore = ["E501"]` defers line-length enforcement to the formatter rather than the
   linter, avoiding double-reporting.
 
@@ -29,7 +34,7 @@ line-length = 110
 preview = true
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "B", "UP", "C4", "SIM", "RUF"]
+select = ["E", "W", "F", "I", "B", "UP", "C4", "C90", "DOC102", "DOC202", "DOC403", "SIM", "RUF"]
 ignore = ["E501"]
 
 [tool.ruff.format]
@@ -41,6 +46,7 @@ quote-style = "double"
 - `max-complexity = 15` is lenient enough for real-world code but catches genuinely
   tangled functions. Lower to 10 for new greenfield projects. Raise to 20 only for
   data-pipeline code with unavoidable branching (and add a comment explaining why).
+  This backs Ruff's `C901` rule.
 
 ```toml
 [tool.ruff.lint.mccabe]

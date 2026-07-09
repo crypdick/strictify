@@ -9,8 +9,11 @@ line-length = 110
 preview = true
 
 [lint]
-select = ["E", "W", "F", "I", "B", "UP", "C4", "SIM", "RUF"]
+select = ["E", "W", "F", "I", "B", "UP", "C4", "C90", "DOC102", "DOC202", "DOC403", "SIM", "RUF"]
 ignore = ["E501"]  # line-length deferred to the formatter, per the shipped config
+
+[lint.mccabe]
+max-complexity = 15
 
 [format]
 quote-style = "double"

@@ -43,7 +43,7 @@ First, use the Phase 1 analysis to filter to the categories that actually fit th
 ### Static Analysis & Type Safety (categories 1-6)
 
 1. **Pre-commit framework** -- install if missing, add missing hooks. Read `references/pre-commit-config.md` for the full template.
-2. **Ruff** -- lint rules (`E`, `W`, `F`, `I`, `B`, `UP`, `C4`, `SIM`, `RUF`) and format config. Read `references/pyproject-strict.md` for exact settings.
+2. **Ruff** -- lint rules (`E`, `W`, `F`, `I`, `B`, `UP`, `C4`, `C90`, stale-docstring `DOC` checks, `SIM`, `RUF`) and format config. Read `references/pyproject-strict.md` for exact settings.
 3. **mypy** -- `strict = true` with pragmatic exceptions for the project's frameworks. Read `references/pyproject-strict.md` for strict mypy config and framework overrides.
 4. **Beartype** -- add dependency, insert `beartype_this_package()` in package `__init__.py`. Read `references/beartype-setup.md` for integration patterns and common issues.
 5. **Semantic typing** -- recorded as a principle in the `CONVENTIONS.md` design doc (Phase 3): give domain concepts (user IDs, amounts, slugs) a distinct `NewType`/`TypeAlias` instead of a bare primitive. Deciding *which* primitives carry domain meaning is a judgment call, so it lives in the conventions doc for the agent to apply, not a regex hook.
@@ -52,7 +52,7 @@ First, use the Phase 1 analysis to filter to the categories that actually fit th
 ### Code Health (categories 7-10)
 
 7. **Vulture** -- dead code detection with sensible ignore list. Read `references/pyproject-strict.md` for `min_confidence` and ignore settings.
-8. **Xenon** -- cyclomatic complexity ceiling (max-average C, max-modules C, max-absolute C). Read `references/pre-commit-config.md` for xenon hook config.
+8. **Ruff C901** -- cyclomatic complexity ceiling through Ruff's mccabe rule (`C90` select plus `[tool.ruff.lint.mccabe] max-complexity`). Read `references/pyproject-strict.md` for config.
 9. **Pyupgrade + flynt** -- modernize syntax to the project's target Python version. Automates f-string conversion and syntax upgrades.
 10. **Structured logging** -- detect unstructured logging patterns (string concatenation, %-formatting, f-strings in log calls) and nudge toward structured `logger.info("message", key=value)` style.
 
@@ -100,7 +100,7 @@ For each approved category, perform the following. Read the referenced files bef
 
 Detect the package manager and run the appropriate install command:
 
-- **uv**: `uv add --dev ruff mypy beartype vulture pytest pytest-xdist pytest-cov pytest-timeout pytest-asyncio xenon pyupgrade flynt pre-commit`
+- **uv**: `uv add --dev ruff mypy beartype vulture pytest pytest-xdist pytest-cov pytest-timeout pytest-asyncio pyupgrade flynt pre-commit`
 - **pip**: `pip install` equivalent
 - **poetry**: `poetry add --group dev` equivalent
 

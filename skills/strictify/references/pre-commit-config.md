@@ -62,14 +62,15 @@ repos:
         exclude: uv\.lock
 
   # ──────────────────────────────────────────────────────────────────────
-  # Ruff -- linting and formatting
-  # Replaces flake8, isort, pyupgrade (partially), and black.
+  # Ruff -- linting, formatting, and complexity
+  # Replaces flake8, isort, pyupgrade (partially), black, and the standalone
+  # complexity hook.
   # --fix auto-corrects safe issues (import sorting, unused imports).
   # --quiet suppresses "all checks passed" noise in pre-commit output.
   # Configuration lives in pyproject.toml [tool.ruff].
   # ──────────────────────────────────────────────────────────────────────
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.12
+    rev: v0.15.20
     hooks:
       - id: ruff-check
         args: [--fix, --quiet]
@@ -118,18 +119,6 @@ repos:
   # ──────────────────────────────────────────────────────────────────────
   - repo: local
     hooks:
-      # ── Complexity gate ──────────────────────────────────────────────
-      # xenon enforces maximum cyclomatic complexity at the module,
-      # function, and average level. Grade C (max-absolute C) allows
-      # up to complexity 25 per function -- strict but realistic.
-      # Tighten to B for greenfield projects.
-      - id: xenon
-        name: xenon complexity check
-        entry: uv run xenon --max-average C --max-modules C --max-absolute C {package_name}/
-        language: system
-        pass_filenames: false
-        always_run: true
-
       # ── Type checking ───────────────────────────────────────────────
       # mypy runs in strict mode (configured in pyproject.toml).
       # pass_filenames is false because mypy needs to see the whole
@@ -238,5 +227,7 @@ repos:
 6. **Django projects:** Add `--settings=myproject.settings.test` to the mypy entry if
    Django settings are required for type checking.
 
-7. **Monorepos:** If the project has multiple packages, duplicate the xenon and mypy
-   hooks for each package directory, or use a wrapper script that iterates over them.
+7. **Monorepos:** If the project has multiple packages, duplicate the mypy hooks for
+   each package directory, or use a wrapper script that iterates over them. Ruff's
+   `C901` complexity check runs through the normal Ruff hook across changed Python
+   files, with project-wide settings in `pyproject.toml`.

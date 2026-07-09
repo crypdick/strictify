@@ -27,7 +27,7 @@ repos:
   # .py in the repo). Config lives in ruff.toml and mirrors the strict config
   # strictify ships to target repos.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.4
+    rev: v0.15.20
     hooks:
       - id: ruff-check
         args: [--fix, --quiet]
