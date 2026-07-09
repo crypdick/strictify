@@ -123,7 +123,7 @@ def main(filenames: list[str] | None = None) -> int:
 
         # Allow file-level ignore via comment in first 5 lines
         try:
-            with open(filepath, encoding="utf-8") as f:
+            with filepath.open(encoding="utf-8") as f:
                 first_lines = [next(f, "") for _ in range(5)]
                 if any("# allow: file-length" in line for line in first_lines):
                     continue

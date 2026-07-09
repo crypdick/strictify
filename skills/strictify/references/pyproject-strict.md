@@ -17,16 +17,24 @@ Ruff replaces flake8, isort, pyupgrade, and black in a single fast tool.
 - `preview = true` opts into newer rules that haven't yet stabilized. This is intentional:
   strict repos should catch issues early, and preview rules rarely produce false positives
   in well-typed codebases.
-- The `select` list covers the most impactful rule families without being exhaustive.
-  `C90` enables Ruff's mccabe `C901` cyclomatic-complexity check, so complexity
-  enforcement stays inside the normal Ruff pass. Add `"PLC"` if the project has
-  Pylint-style convention concerns. Add `"UP"` if the project hasn't yet been
-  modernized to the target Python version.
+- The `select` list covers the highest-signal anti-slop rule families for
+  agent-managed repos: builtin shadowing (`A`), unused arguments (`ARG`), async
+  footguns (`ASYNC`), blind exceptions (`BLE`), naive datetimes (`DTZ`),
+  commented-out code (`ERA`), future annotations (`FA`), boolean-trap APIs (`FBT`),
+  logging hygiene (`G`, `LOG`), naming (`N`), precise suppressions (`PGH`),
+  cleanup rules (`PIE`, `RET`, `RSE`), targeted Pylint checks (`PLC`, `PLE`,
+  `PLW`, selected `PLR`), pytest style (`PT`), pathlib (`PTH`), security footguns
+  (`S`), private-member access (`SLF`), debugger/print bans (`T10`, `T20`),
+  type-checking imports (`TC`), import boundaries (`TID`), targeted exception
+  rules (`TRY004`, `TRY201`, `TRY203`, `TRY400`, `TRY401`), and Python-version
+  traps (`YTT`).
+- `C90` enables Ruff's mccabe `C901` cyclomatic-complexity check, so complexity
+  enforcement stays inside the normal Ruff pass.
 - `DOC102`, `DOC202`, and `DOC403` catch stale docstring sections after refactors
   without requiring docstrings everywhere. Do not enable broad `D` or `DOC` by
   default: agents respond to missing-docstring gates by writing low-value filler.
-- `ignore = ["E501"]` defers line-length enforcement to the formatter rather than the
-  linter, avoiding double-reporting.
+- `ignore = ["E501", "TRY003"]` defers line-length enforcement to the formatter
+  and avoids exception-class ceremony for simple domain errors.
 
 ```toml
 [tool.ruff]
@@ -34,8 +42,62 @@ line-length = 110
 preview = true
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "B", "UP", "C4", "C90", "DOC102", "DOC202", "DOC403", "SIM", "RUF"]
-ignore = ["E501"]
+select = [
+    "A",
+    "ARG",
+    "ASYNC",
+    "B",
+    "BLE",
+    "C4",
+    "C90",
+    "DOC102",
+    "DOC202",
+    "DOC403",
+    "DTZ",
+    "E",
+    "ERA",
+    "F",
+    "FA",
+    "FBT",
+    "G",
+    "I",
+    "LOG",
+    "N",
+    "PGH",
+    "PIE",
+    "PLC",
+    "PLE",
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+    "PLR1702",
+    "PLW",
+    "PT",
+    "PTH",
+    "RET",
+    "RSE",
+    "RUF",
+    "S",
+    "SIM",
+    "SLF",
+    "T10",
+    "T20",
+    "TC",
+    "TID",
+    "TRY004",
+    "TRY201",
+    "TRY203",
+    "TRY400",
+    "TRY401",
+    "UP",
+    "W",
+    "YTT",
+]
+ignore = [
+    "E501",
+    "TRY003",
+]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -56,8 +118,8 @@ max-complexity = 15
 ### Per-file ignores
 
 - Test files commonly use unused variables (captured return values), high complexity
-  (parameterized setup), and many arguments (fixtures). Suppress these categories
-  wholesale for `tests/`.
+  (parameterized setup), many arguments (fixtures), asserts, private-member access,
+  and boolean positional helpers. Suppress these categories wholesale for `tests/`.
 - Scripts similarly get complexity exemptions since they are often one-shot utilities.
 - For Django projects, add `"migrations/**/*.py" = ["E501", "RUF012"]` to suppress
   auto-generated migration noise.
@@ -66,8 +128,8 @@ max-complexity = 15
 
 ```toml
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["F841", "C901", "PLR0912", "PLR0913", "PLR0915"]
-"scripts/**/*.py" = ["C901", "PLR0912", "PLR0913", "PLR0915"]
+"tests/**/*.py" = ["ARG", "C901", "FBT", "F841", "PLR0912", "PLR0913", "PLR0915", "S101", "SLF"]
+"scripts/**/*.py" = ["C901", "PLR0912", "PLR0915", "S603", "S607", "T20"]
 ```
 
 ---

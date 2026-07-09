@@ -43,7 +43,7 @@ First, use the Phase 1 analysis to filter to the categories that actually fit th
 ### Static Analysis & Type Safety (categories 1-6)
 
 1. **Pre-commit framework** -- install if missing, add missing hooks. Read `references/pre-commit-config.md` for the full template.
-2. **Ruff** -- lint rules (`E`, `W`, `F`, `I`, `B`, `UP`, `C4`, `C90`, stale-docstring `DOC` checks, `SIM`, `RUF`) and format config. Read `references/pyproject-strict.md` for exact settings.
+2. **Ruff** -- anti-slop lint rules (core `E`/`W`/`F`/`I`, `B`, `UP`, `C4`, `SIM`, `RUF`, complexity `C90`, stale-docstring `DOC` checks, plus high-signal families for async, exceptions, logging, security, pytest, pathlib, suppressions, private access, debugger/print bans, and import boundaries) and format config. Read `references/pyproject-strict.md` for exact settings.
 3. **mypy** -- `strict = true` with pragmatic exceptions for the project's frameworks. Read `references/pyproject-strict.md` for strict mypy config and framework overrides.
 4. **Beartype** -- add dependency, insert `beartype_this_package()` in package `__init__.py`. Read `references/beartype-setup.md` for integration patterns and common issues.
 5. **Semantic typing** -- recorded as a principle in the `CONVENTIONS.md` design doc (Phase 3): give domain concepts (user IDs, amounts, slugs) a distinct `NewType`/`TypeAlias` instead of a bare primitive. Deciding *which* primitives carry domain meaning is a judgment call, so it lives in the conventions doc for the agent to apply, not a regex hook.
