@@ -1,6 +1,6 @@
 {
   "name": "strictify",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Apply opinionated Python code quality enforcement to any repo. Analyzes existing config, proposes strictness additions across 22 categories, and installs self-reinforcing hookify rules.",
   "author": {
     "name": "Ricardo Decal"

@@ -47,8 +47,9 @@ when dependency metadata is trustworthy, `pyproject.toml` schema validation is
 used only while its third-party schemas cover the selected tools, and `check-sdist`
 is reserved for publishable distributions.
 
-Ruff remains a curated policy: Strictify does not enable `ALL`, global preview mode,
-or unsafe fixes.
+Ruff remains a curated policy: Strictify does not enable `ALL`, top-level preview mode,
+or unsafe fixes. Preview lint rules are opted into by exact code so broader rule-family
+selections cannot silently acquire new preview checks.
 
 ### Categories
 

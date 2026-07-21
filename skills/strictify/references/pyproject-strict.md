@@ -14,16 +14,19 @@ Ruff replaces flake8, isort, pyupgrade, and black in a single fast tool.
 - `line-length = 110` is a pragmatic default -- long enough for modern screens, short enough
   to discourage run-on expressions. Adjust down to 88 for projects that follow strict
   black-compatible formatting.
-- The rule set is curated and versioned deliberately. Do not enable `ALL`, global preview
-  mode, or unsafe fixes: review new rule families and fix safety before opting into them.
+- The rule set is curated and versioned deliberately. Do not enable `ALL`, top-level
+  preview mode, or unsafe fixes: review new rule families and fix safety before opting
+  into them. Lint-scoped preview mode plus `explicit-preview-rules = true` permits the
+  exact preview rules selected below without letting family prefixes silently acquire
+  new preview rules during a Ruff upgrade; formatter preview remains disabled.
 - The `select` list covers the highest-signal anti-slop rule families for
   agent-managed repos: builtin shadowing (`A`), explicit annotations (`ANN`),
   unused arguments (`ARG`), async footguns (`ASYNC`), blind exceptions (`BLE`),
   bare-tuple comma bugs (`COM818`), naive datetimes (`DTZ`), commented-out code
   (`ERA`), executable-script hygiene (`EXE`), future annotations (`FA`),
   boolean-trap APIs (`FBT`), targeted refurb checks (`FURB`), logging hygiene
-  (`G`, `LOG`), package initialization (`INP`), naming (`N`),
-  performance/readability (`PERF`), precise
+  (`G`, `LOG`), package initialization (`INP`), collection string-concat bugs
+  (`ISC004`), naming (`N`), performance/readability (`PERF`), precise
   suppressions (`PGH`), cleanup rules (`PIE`, `RET`, `RSE`), targeted Pylint
   checks (`PLC`, `PLE`, `PLW`, selected `PLR`), pytest style (`PT`), pathlib
   (`PTH`), security footguns (`S`), private-member access (`SLF`), slots on
@@ -33,9 +36,11 @@ Ruff replaces flake8, isort, pyupgrade, and black in a single fast tool.
   Python-version traps (`YTT`).
 - `C90` enables Ruff's mccabe `C901` cyclomatic-complexity check, so complexity
   enforcement stays inside the normal Ruff pass.
-- Selected `D` rules catch empty or structurally misleading docstrings without
-  requiring docstrings everywhere. Do not enable broad `D` or `DOC` by default:
-  agents respond to missing-docstring gates by writing low-value filler.
+- `DOC102`, `DOC202`, and `DOC403` catch stale docstring sections after refactors
+  without requiring docstrings everywhere. Selected `D` rules catch empty or
+  structurally misleading docstrings without forcing filler documentation. Do
+  not enable broad `D` or `DOC` by default: agents respond to missing-docstring
+  gates by writing low-value filler.
 - `ANN401` is intentionally strict. Prefer parsing untrusted input at boundaries
   into domain models, `TypedDict`s, `Protocol`s, or `object` plus narrowing. Use
   a narrow `# noqa: ANN401` only when a boundary is genuinely dynamic and cannot
@@ -55,6 +60,8 @@ Ruff replaces flake8, isort, pyupgrade, and black in a single fast tool.
 line-length = 110
 
 [tool.ruff.lint]
+preview = true
+explicit-preview-rules = true
 select = [
     "A",
     "ANN001",
@@ -77,6 +84,9 @@ select = [
     "D414",
     "D418",
     "D419",
+    "DOC102",
+    "DOC202",
+    "DOC403",
     "DTZ",
     "E",
     "ERA",
@@ -84,6 +94,8 @@ select = [
     "F",
     "FA",
     "FBT",
+    "FURB101",
+    "FURB103",
     "FURB122",
     "FURB129",
     "FURB132",
@@ -99,6 +111,7 @@ select = [
     "G",
     "I",
     "INP",
+    "ISC004",
     "LOG",
     "N",
     "PERF",
@@ -113,6 +126,7 @@ select = [
     "PLR0912",
     "PLR0913",
     "PLR0915",
+    "PLR1702",
     "PLR1704",
     "PLR1711",
     "PLR1714",
