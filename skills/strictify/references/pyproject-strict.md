@@ -14,17 +14,16 @@ Ruff replaces flake8, isort, pyupgrade, and black in a single fast tool.
 - `line-length = 110` is a pragmatic default -- long enough for modern screens, short enough
   to discourage run-on expressions. Adjust down to 88 for projects that follow strict
   black-compatible formatting.
-- `preview = true` opts into newer rules that haven't yet stabilized. This is intentional:
-  strict repos should catch issues early, and preview rules rarely produce false positives
-  in well-typed codebases.
+- The rule set is curated and versioned deliberately. Do not enable `ALL`, global preview
+  mode, or unsafe fixes: review new rule families and fix safety before opting into them.
 - The `select` list covers the highest-signal anti-slop rule families for
   agent-managed repos: builtin shadowing (`A`), explicit annotations (`ANN`),
   unused arguments (`ARG`), async footguns (`ASYNC`), blind exceptions (`BLE`),
   bare-tuple comma bugs (`COM818`), naive datetimes (`DTZ`), commented-out code
   (`ERA`), executable-script hygiene (`EXE`), future annotations (`FA`),
   boolean-trap APIs (`FBT`), targeted refurb checks (`FURB`), logging hygiene
-  (`G`, `LOG`), package initialization (`INP`), collection string-concat bugs
-  (`ISC004`), naming (`N`), performance/readability (`PERF`), precise
+  (`G`, `LOG`), package initialization (`INP`), naming (`N`),
+  performance/readability (`PERF`), precise
   suppressions (`PGH`), cleanup rules (`PIE`, `RET`, `RSE`), targeted Pylint
   checks (`PLC`, `PLE`, `PLW`, selected `PLR`), pytest style (`PT`), pathlib
   (`PTH`), security footguns (`S`), private-member access (`SLF`), slots on
@@ -34,11 +33,9 @@ Ruff replaces flake8, isort, pyupgrade, and black in a single fast tool.
   Python-version traps (`YTT`).
 - `C90` enables Ruff's mccabe `C901` cyclomatic-complexity check, so complexity
   enforcement stays inside the normal Ruff pass.
-- `DOC102`, `DOC202`, and `DOC403` catch stale docstring sections after refactors
-  without requiring docstrings everywhere. Selected `D` rules catch empty or
-  structurally misleading docstrings without forcing filler documentation. Do
-  not enable broad `D` or `DOC` by default: agents respond to missing-docstring
-  gates by writing low-value filler.
+- Selected `D` rules catch empty or structurally misleading docstrings without
+  requiring docstrings everywhere. Do not enable broad `D` or `DOC` by default:
+  agents respond to missing-docstring gates by writing low-value filler.
 - `ANN401` is intentionally strict. Prefer parsing untrusted input at boundaries
   into domain models, `TypedDict`s, `Protocol`s, or `object` plus narrowing. Use
   a narrow `# noqa: ANN401` only when a boundary is genuinely dynamic and cannot
@@ -56,7 +53,6 @@ Ruff replaces flake8, isort, pyupgrade, and black in a single fast tool.
 ```toml
 [tool.ruff]
 line-length = 110
-preview = true
 
 [tool.ruff.lint]
 select = [
@@ -81,9 +77,6 @@ select = [
     "D414",
     "D418",
     "D419",
-    "DOC102",
-    "DOC202",
-    "DOC403",
     "DTZ",
     "E",
     "ERA",
@@ -91,8 +84,6 @@ select = [
     "F",
     "FA",
     "FBT",
-    "FURB101",
-    "FURB103",
     "FURB122",
     "FURB129",
     "FURB132",
@@ -108,7 +99,6 @@ select = [
     "G",
     "I",
     "INP",
-    "ISC004",
     "LOG",
     "N",
     "PERF",
@@ -123,7 +113,6 @@ select = [
     "PLR0912",
     "PLR0913",
     "PLR0915",
-    "PLR1702",
     "PLR1704",
     "PLR1711",
     "PLR1714",
@@ -263,9 +252,11 @@ ignore_errors = true
   non-parallelizable tests (shared database state, file locks). If the project uses
   Django, use `--reuse-db` alongside `-n auto`.
 - `--failed-first` re-runs failures before passing tests, tightening the feedback loop.
+- `--cov={package_name}` activates pytest-cov and restricts measurement to production
+  code. Reporting flags alone do not start coverage collection. Developers can still use
+  `uv run pytest --no-cov` for a faster one-off run.
 - `--cov-report=term-missing --cov-report=html` provides both terminal and browsable
-  coverage output. The `--cov` flag itself is intentionally omitted here so developers
-  can run `uv run pytest --no-cov` for speed during development.
+  coverage output.
 - `timeout = 20` catches hanging tests early. Increase to 60 for integration tests that
   hit real services, or add `@pytest.mark.timeout(60)` on individual slow tests.
 - `timeout_method = "thread"` works with both sync and async code. Use `"signal"` only
@@ -276,7 +267,7 @@ ignore_errors = true
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "--no-header -n auto -q --durations=5 --durations-min=1.0 --cov-report=term-missing --cov-report=html --failed-first"
+addopts = "--no-header -n auto -q --durations=5 --durations-min=1.0 --cov={package_name} --cov-report=term-missing --cov-report=html --failed-first"
 timeout = 20
 timeout_method = "thread"
 ```
@@ -294,23 +285,29 @@ timeout_method = "thread"
 
 ## [tool.coverage] -- Code Coverage
 
+- `branch = true` measures decision outcomes as well as executed lines. Without it, a
+  conditional can count as covered even when only one branch was exercised.
 - `fail_under = 100` is the strict target. The agent should set this to the project's
   current coverage percentage rounded down to the nearest integer on first adoption,
   then ratchet it up over time. Setting it to 100 immediately on a legacy codebase will
   block all commits.
 - `skip_empty = true` excludes `__init__.py` files and other empty modules from the
   coverage denominator.
-- The `exclude_lines` patterns cover common boilerplate that is either untestable or
-  tested implicitly (abstract methods, `TYPE_CHECKING` blocks, `__repr__` methods).
+- `fail_under` and `skip_empty` are report settings, not run settings. Putting them under
+  `[tool.coverage.run]` makes Coverage.py ignore the intended enforcement.
+- The `exclude_also` patterns cover common boilerplate that is either untestable or
+  tested implicitly (abstract methods, `TYPE_CHECKING` blocks, `__repr__` methods) while
+  preserving Coverage.py's built-in exclusions.
 
 ```toml
 [tool.coverage.run]
-fail_under = 100
-skip_empty = true
+branch = true
+source = ["{package_name}"]
 
 [tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
+fail_under = 100
+skip_empty = true
+exclude_also = [
     "def __repr__",
     "raise AssertionError",
     "raise NotImplementedError",
@@ -323,12 +320,10 @@ exclude_lines = [
 
 **Adjustments:**
 
-- Add a `source = ["{package_name}"]` under `[tool.coverage.run]` to restrict coverage
-  measurement to the package itself (excluding tests, scripts, etc.).
 - Add `omit = ["*/tests/*", "*/test_*.py", "*/__pycache__/*", "*/conftest.py"]` to
   `[tool.coverage.run]` to exclude test infrastructure from the coverage denominator.
 - For Django, add `"*/migrations/*"` and `"*/admin.py"` to `omit`.
-- For CLI tools, add `"*/cli.py"` or `"*/__main__.py"` to `exclude_lines` patterns if
+- For CLI tools, add `"*/cli.py"` or `"*/__main__.py"` to `exclude_also` patterns if
   the CLI entry point is hard to test without subprocess calls.
 
 ---
@@ -359,3 +354,37 @@ exclude = [".venv/"]
 - For projects with many false positives, prefer adding specific names to `ignore_names`
   rather than raising `min_confidence` -- this keeps detection sensitive while silencing
   known framework patterns.
+
+---
+
+## [tool.deptry] -- Dependency Integrity
+
+Use deptry only when the repo has authoritative dependency metadata in `pyproject.toml`
+or another supported format. Skip it for scripts with ad hoc environments, vendored
+trees, and plugin hosts whose imports are intentionally supplied by the host process.
+
+Deptry catches four distinct declaration failures:
+
+- imported packages missing from declared dependencies;
+- declared runtime dependencies that production code does not use;
+- imports that work only because another dependency brings them in transitively;
+- development dependencies imported by production code.
+
+Keep exceptions narrow and rule-specific. Do not globally disable missing- or
+transitive-dependency checks merely because one framework has dynamic imports.
+
+```toml
+[tool.deptry]
+extend_exclude = ["scripts/prek_hooks"]
+
+# Add only when a project.optional-dependencies group contains development tools.
+# optional_dependencies_dev_groups = ["dev"]
+```
+
+**Adjustments:**
+
+- Set `optional_dependencies_dev_groups` to the target repo's actual group names when
+  development tools live under `[project.optional-dependencies]`. Standard
+  `[dependency-groups]` entries are recognized as development dependencies directly.
+- Add generated code, migrations, or host-loaded plugin modules to `extend_exclude`
+  only after confirming deptry cannot model the import boundary accurately.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-commit hook to detect print() calls and unstructured logging in production code.
+"""Prek hook to detect print() calls and unstructured logging in production code.
 
 Philosophy: Production code should use structured logging (the ``logging``
 module) instead of ``print()``.  When using a logger, prefer parameterised
@@ -27,14 +27,16 @@ import sys
 from pathlib import Path
 
 # Logger method names we care about
-_LOGGER_METHODS = frozenset({
-    "debug",
-    "info",
-    "warning",
-    "error",
-    "critical",
-    "exception",
-})
+_LOGGER_METHODS = frozenset(
+    {
+        "debug",
+        "info",
+        "warning",
+        "error",
+        "critical",
+        "exception",
+    }
+)
 
 
 class PrintStatementVisitor(ast.NodeVisitor):
@@ -51,10 +53,12 @@ class PrintStatementVisitor(ast.NodeVisitor):
             line_num = node.lineno
             end_line = getattr(node, "end_lineno", line_num) or line_num
             if not self._has_allow_comment(line_num, end_line):
-                self.violations.append((
-                    line_num,
-                    "print() call in production code — use logger.info() or logger.debug() instead",
-                ))
+                self.violations.append(
+                    (
+                        line_num,
+                        "print() call in production code — use logger.info() or logger.debug() instead",
+                    )
+                )
 
         self.generic_visit(node)
 
@@ -108,25 +112,29 @@ class UnstructuredLoggingVisitor(ast.NodeVisitor):
 
             # Detect string concatenation: logger.info("msg: " + val)
             if isinstance(first_arg, ast.BinOp) and isinstance(first_arg.op, ast.Add):
-                self.violations.append((
-                    line_num,
+                self.violations.append(
                     (
-                        "String concatenation in logger call "
-                        "— use structured logging instead: "
-                        "logger.info('event description', extra={'key': value})"
-                    ),
-                ))
+                        line_num,
+                        (
+                            "String concatenation in logger call "
+                            "— use structured logging instead: "
+                            "logger.info('event description', extra={'key': value})"
+                        ),
+                    )
+                )
 
             # Detect f-string: logger.info(f"msg: {val}")
             elif isinstance(first_arg, ast.JoinedStr):
-                self.violations.append((
-                    line_num,
+                self.violations.append(
                     (
-                        "f-string formatting in logger call "
-                        "— use structured logging instead: "
-                        "logger.info('event description', extra={'key': value})"
-                    ),
-                ))
+                        line_num,
+                        (
+                            "f-string formatting in logger call "
+                            "— use structured logging instead: "
+                            "logger.info('event description', extra={'key': value})"
+                        ),
+                    )
+                )
 
         self.generic_visit(node)
 

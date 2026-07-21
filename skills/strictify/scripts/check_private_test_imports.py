@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-commit hook to forbid tests from importing private first-party symbols.
+"""Prek hook to forbid tests from importing private first-party symbols.
 
 Philosophy: tests should verify *public behaviour*, not private implementation
 shape. Importing a leading-underscore name from a first-party package into a
@@ -37,18 +37,20 @@ import sys
 from pathlib import Path
 
 _ALLOW_MARKER = "private-test-imports"
-_SKIP_DIRS = frozenset({
-    "tests",
-    "test",
-    "scripts",
-    "docs",
-    "doc",
-    "examples",
-    "build",
-    "dist",
-    "node_modules",
-    "__pycache__",
-})
+_SKIP_DIRS = frozenset(
+    {
+        "tests",
+        "test",
+        "scripts",
+        "docs",
+        "doc",
+        "examples",
+        "build",
+        "dist",
+        "node_modules",
+        "__pycache__",
+    }
+)
 
 
 def detect_first_party_packages(root: Path) -> set[str]:

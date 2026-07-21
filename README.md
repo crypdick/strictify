@@ -29,22 +29,34 @@ Or add to `~/.claude/settings.json`:
 
 Strictify ships two kinds of enforcement, and most categories blend both:
 
-- **Pre-baked opinionated configs and scripts** — ruff/mypy/pytest/coverage settings, the pre-commit template, and self-contained hook scripts that drop into any repo unchanged.
+- **Pre-baked opinionated configs and scripts** — ruff/mypy/pytest/coverage settings, a native `prek.toml` template, and self-contained hook scripts that drop into any repo unchanged.
 - **Adaptable agent directives** — instructions that direct the agent to apply a *principle* to the specifics of your repo (its layers, its services, its worktree isolation needs) rather than copy a fixed artifact. When the right answer varies case by case, strictify hands the agent the essence and lets it build what fits — it does not hardcode stack-specific instructions (no baked-in OpenAPI/Postgres/Kysely recipes).
 
 `/strictify` runs a three-phase workflow:
 
-1. **Analyze** — scans pyproject.toml, pre-commit config, package layout, Python version, package manager, test setup, beartype, domain structure
+1. **Analyze** — scans pyproject.toml, `prek.toml`, package layout, Python version, package manager, test setup, beartype, domain structure
 2. **Propose** — presents 22 categories grouped into 6 areas, showing current state vs. proposed change for each. You veto what you don't want.
 3. **Apply** — merges configs, copies scripts, installs hooks, adds dev dependencies
+
+Hook enforcement uses `prek` exclusively. Strictify migrates legacy YAML hook
+configuration to native `prek.toml` and removes the old config rather than keeping
+two runners in parallel.
+
+Dependency and package checks are fitted to the target: `deptry` is enabled only
+when dependency metadata is trustworthy, `pyproject.toml` schema validation is
+used only while its third-party schemas cover the selected tools, and `check-sdist`
+is reserved for publishable distributions.
+
+Ruff remains a curated policy: Strictify does not enable `ALL`, global preview mode,
+or unsafe fixes.
 
 ### Categories
 
 | Group | Categories |
 |-------|-----------|
-| **Static Analysis & Type Safety** | Pre-commit framework, Ruff anti-slop rules, mypy strict, Beartype, Semantic typing (NewType), Parse-don't-validate |
-| **Code Health** | Vulture (dead code), Ruff C901 (complexity), Pyupgrade + Flynt, Structured logging |
-| **Testing & Coverage** | Coverage `fail_under=100`, Fast tests (xdist, timeouts, --failed-first), Red/green TDD agent directive |
+| **Static Analysis & Type Safety** | Prek hook framework, Ruff anti-slop rules, mypy strict, Beartype, Semantic typing (NewType), Parse-don't-validate |
+| **Code Health** | Vulture (dead code), Dependency/package integrity, Pyupgrade + Flynt, Structured logging |
+| **Testing & Coverage** | Branch coverage with `fail_under=100`, Fast tests (xdist, timeouts, --failed-first), Red/green TDD agent directive |
 | **Architecture & Organization** | File length limits, Architecture codemap (ARCHITECTURE.md), Architectural layers, Quality scorecard |
 | **Environment & Infrastructure** | Ephemeral environments, Per-worktree isolation |
 | **Ongoing Enforcement** | Custom hooks, Hygiene hooks, Doc gardening, Taste enforcer |
@@ -53,7 +65,7 @@ Strictify ships two kinds of enforcement, and most categories blend both:
 
 Two rules are installed into your project's `.claude/` directory — both mechanical, low-false-positive matches:
 
-- **taste-enforcer** — when you express a coding preference ("don't use X", "always prefer Y"), Claude codifies it as a pre-commit hook, hookify rule, or pyproject.toml setting
+- **taste-enforcer** — when you express a coding preference ("don't use X", "always prefer Y"), Claude codifies it as a prek hook, hookify rule, or pyproject.toml setting
 - **no-junk-drawers** — warns on `utils.py`, `helpers.py`, `misc.py` — name modules after what they do
 
 ### Design conventions doc
@@ -65,9 +77,9 @@ Judgment-based design principles don't belong in a regex hook — deciding wheth
 - **Semantic types** — `NewType` for domain concepts like `user_id`, `amount`, `slug`
 - **Code/doc coupling** — leave `NOTE:` back-pointers where a value is also documented in prose
 
-### Custom pre-commit hooks
+### Custom prek hooks
 
-Six scripts are adapted to your repo and installed in `scripts/pre_commit_hooks/`:
+Six scripts are adapted to your repo and installed in `scripts/prek_hooks/`:
 
 | Hook | What it catches |
 |------|----------------|

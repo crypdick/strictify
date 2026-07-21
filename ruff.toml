@@ -1,4 +1,4 @@
-# Ruff config for this repo's own Python — the six stdlib-only pre-commit hook
+# Ruff config for this repo's own Python — the six stdlib-only prek hook
 # scripts under skills/strictify/scripts/ (the only .py in the repo).
 #
 # Mirrors the strict config strictify ships in
@@ -6,7 +6,6 @@
 # pass the exact bar the plugin enforces on target repos.
 
 line-length = 110
-preview = true
 
 [lint]
 select = [
@@ -31,9 +30,6 @@ select = [
     "D414",
     "D418",
     "D419",
-    "DOC102",
-    "DOC202",
-    "DOC403",
     "DTZ",
     "E",
     "ERA",
@@ -41,8 +37,6 @@ select = [
     "F",
     "FA",
     "FBT",
-    "FURB101",
-    "FURB103",
     "FURB122",
     "FURB129",
     "FURB132",
@@ -58,7 +52,6 @@ select = [
     "G",
     "I",
     "INP",
-    "ISC004",
     "LOG",
     "N",
     "PERF",
@@ -73,7 +66,6 @@ select = [
     "PLR0912",
     "PLR0913",
     "PLR0915",
-    "PLR1702",
     "PLR1704",
     "PLR1711",
     "PLR1714",

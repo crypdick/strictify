@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-commit hook to detect overly broad exception handling.
+"""Prek hook to detect overly broad exception handling.
 
 Philosophy: Do not use overly permissive exception handling that swallows
 errors. Prefer to fail fast and fix the root cause rather than masking the
@@ -54,15 +54,17 @@ class ExceptionHandlerVisitor(ast.NodeVisitor):
 
         # Check for bare except:
         if node.type is None:
-            self.violations.append((
-                line_num,
-                "bare_except",
+            self.violations.append(
                 (
-                    "Bare 'except:' clause catches all exceptions including "
-                    "KeyboardInterrupt — catch a specific exception type instead "
-                    "(e.g., except ValueError as e:)"
-                ),
-            ))
+                    line_num,
+                    "bare_except",
+                    (
+                        "Bare 'except:' clause catches all exceptions including "
+                        "KeyboardInterrupt — catch a specific exception type instead "
+                        "(e.g., except ValueError as e:)"
+                    ),
+                )
+            )
         # Check for except Exception:
         elif isinstance(node.type, ast.Name) and node.type.id == "Exception":
             # Check if it re-raises
@@ -73,23 +75,27 @@ class ExceptionHandlerVisitor(ast.NodeVisitor):
             is_only_continue = len(node.body) == 1 and isinstance(node.body[0], ast.Continue)
 
             if is_only_pass:
-                self.violations.append((
-                    line_num,
-                    "exception_pass",
+                self.violations.append(
                     (
-                        "Exception handler with only 'pass' swallows all errors "
-                        "— log the error and re-raise, or catch a narrower type"
-                    ),
-                ))
+                        line_num,
+                        "exception_pass",
+                        (
+                            "Exception handler with only 'pass' swallows all errors "
+                            "— log the error and re-raise, or catch a narrower type"
+                        ),
+                    )
+                )
             elif is_only_continue:
-                self.violations.append((
-                    line_num,
-                    "exception_continue",
+                self.violations.append(
                     (
-                        "Exception handler with only 'continue' swallows all errors "
-                        "— log the error and re-raise, or catch a narrower type"
-                    ),
-                ))
+                        line_num,
+                        "exception_continue",
+                        (
+                            "Exception handler with only 'continue' swallows all errors "
+                            "— log the error and re-raise, or catch a narrower type"
+                        ),
+                    )
+                )
             elif not has_raise:
                 # Only flag if there's no logging or other meaningful action
                 has_logging = any(
@@ -101,14 +107,16 @@ class ExceptionHandlerVisitor(ast.NodeVisitor):
                 )
 
                 if not has_logging:
-                    self.violations.append((
-                        line_num,
-                        "broad_exception",
+                    self.violations.append(
                         (
-                            "Broad 'except Exception' without logging or re-raising "
-                            "— catch a specific exception or add logger.exception()"
-                        ),
-                    ))
+                            line_num,
+                            "broad_exception",
+                            (
+                                "Broad 'except Exception' without logging or re-raising "
+                                "— catch a specific exception or add logger.exception()"
+                            ),
+                        )
+                    )
 
         self.generic_visit(node)
 

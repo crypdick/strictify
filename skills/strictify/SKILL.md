@@ -1,6 +1,6 @@
 ---
 name: strictify
-description: This skill should be used when the user asks to "strictify a repo", "add code quality enforcement", "make this repo strict", "add pre-commit hooks", "add type checking", "enforce code quality", "set up linting", or runs the /strictify command.
+description: This skill should be used when the user asks to "strictify a repo", "add code quality enforcement", "make this repo strict", "add prek hooks", "add type checking", "enforce code quality", "set up linting", or runs the /strictify command.
 ---
 
 # Strictify
@@ -25,8 +25,9 @@ The approach is inspired by the "AI Is Forcing Us to Write Good Code" thesis and
 
 Scan the target repo to understand its current state. Check all of the following:
 
-- [ ] **pyproject.toml** -- existence and current tool configs (ruff, mypy, pytest, coverage, vulture sections)
-- [ ] **.pre-commit-config.yaml** -- existence and current hooks
+- [ ] **pyproject.toml** -- existence and current tool configs (ruff, mypy, pytest, coverage, vulture, deptry sections)
+- [ ] **prek.toml** -- existence and current hooks
+- [ ] **Legacy hook config** -- if `.pre-commit-config.yaml` or `.pre-commit-config.yml` exists, plan its one-way migration to native `prek.toml`; strictify does not retain the legacy runner or config
 - [ ] **Package layout** -- `src/` layout vs flat layout; identify the package name
 - [ ] **Python version** -- from `pyproject.toml` `requires-python`, `.python-version`, or `python3 --version`
 - [ ] **Package manager** -- uv (`uv.lock`), poetry (`poetry.lock`), pip (`requirements.txt`)
@@ -42,8 +43,8 @@ First, use the Phase 1 analysis to filter to the categories that actually fit th
 
 ### Static Analysis & Type Safety (categories 1-6)
 
-1. **Pre-commit framework** -- install if missing, add missing hooks. Read `references/pre-commit-config.md` for the full template.
-2. **Ruff** -- anti-slop lint rules (core `E`/`W`/`F`/`I`, `B`, `UP`, `C4`, `SIM`, `RUF`, complexity `C90`, selected annotation/docstring checks, plus high-signal families for async, exceptions, logging, performance, security, pytest, pathlib, suppressions, private access, debugger/print bans, executable scripts, and import/package boundaries) and format config. Read `references/pyproject-strict.md` for exact settings.
+1. **Prek hook framework** -- install `prek` if missing and use native `prek.toml`; this is a hard cut, with no fallback runner. Migrate a legacy YAML hook config instead of leaving both systems in place. Read `references/prek-config.md` for the full template.
+2. **Ruff** -- curated anti-slop lint rules (core `E`/`W`/`F`/`I`, `B`, `UP`, `C4`, `SIM`, `RUF`, complexity `C90`, selected annotation/docstring checks, plus high-signal families for async, exceptions, logging, performance, security, pytest, pathlib, suppressions, private access, debugger/print bans, executable scripts, and import/package boundaries) and format config. Do not enable `ALL`, global preview mode, or unsafe fixes. Read `references/pyproject-strict.md` for exact settings. Ruff owns cyclomatic-complexity enforcement through `C901`; do not add a second complexity tool.
 3. **mypy** -- `strict = true` with pragmatic exceptions for the project's frameworks. Read `references/pyproject-strict.md` for strict mypy config and framework overrides.
 4. **Beartype** -- add dependency, insert `beartype_this_package()` in package `__init__.py`. Read `references/beartype-setup.md` for integration patterns and common issues.
 5. **Semantic typing** -- recorded as a principle in the `CONVENTIONS.md` design doc (Phase 3): give domain concepts (user IDs, amounts, slugs) a distinct `NewType`/`TypeAlias` instead of a bare primitive. Deciding *which* primitives carry domain meaning is a judgment call, so it lives in the conventions doc for the agent to apply, not a regex hook.
@@ -52,13 +53,13 @@ First, use the Phase 1 analysis to filter to the categories that actually fit th
 ### Code Health (categories 7-10)
 
 7. **Vulture** -- dead code detection with sensible ignore list. Read `references/pyproject-strict.md` for `min_confidence` and ignore settings.
-8. **Ruff C901** -- cyclomatic complexity ceiling through Ruff's mccabe rule (`C90` select plus `[tool.ruff.lint.mccabe] max-complexity`). Read `references/pyproject-strict.md` for config.
+8. **Dependency and package integrity** -- when the repo has reliable dependency metadata, add `deptry` to catch missing, unused, transitive, and misplaced development dependencies. Validate `pyproject.toml` when the configured schemas cover the selected tools, but never weaken valid tool configuration to appease a stale third-party schema. For a publishable Python distribution, add `check-sdist`; skip it for applications and non-packaged repos. Read `references/pyproject-strict.md` and `references/prek-config.md` for the conditional configuration.
 9. **Pyupgrade + flynt** -- modernize syntax to the project's target Python version. Automates f-string conversion and syntax upgrades.
 10. **Structured logging** -- detect unstructured logging patterns (string concatenation, %-formatting, f-strings in log calls) and nudge toward structured `logger.info("message", key=value)` style.
 
 ### Testing & Coverage (categories 11-12)
 
-11. **Coverage enforcement** -- `fail_under = 100`. Coverage report as explicit todo list. Curated `exclude_lines` for `TYPE_CHECKING`, `@abstractmethod`, `__repr__`, and other pragmatic exclusions. Read `references/pyproject-strict.md` for the full exclusion list.
+11. **Coverage enforcement** -- collect branch coverage for the actual package, enforce `fail_under = 100` from `[tool.coverage.report]`, and render missing lines as an explicit todo list. Add exclusions with `exclude_also` so Coverage.py's defaults remain intact. Read `references/pyproject-strict.md` for the full configuration.
 12. **Fast test infrastructure** -- pytest-xdist parallel execution, test timeouts, `--failed-first` for fast feedback. Read `references/pyproject-strict.md` for pytest `addopts` config. Separately, *only if the tests make real third-party/external calls* (HTTP APIs, SDKs, network services -- the usual source of slow, flaky suites): propose a record-replay layer (`vcrpy`/`pytest-recording`, `respx` for httpx, or `responses` for requests) that records real responses once and replays them on later runs. A recorded response assumes the third party is a pure function of the request, so pair it with a CI job that re-runs the suite *without* the recordings after PR approval, to catch where that assumption breaks.
 
 ### Architecture & Organization (categories 13-16)
@@ -76,9 +77,9 @@ First, use the Phase 1 analysis to filter to the categories that actually fit th
 ### Ongoing Enforcement (categories 19-22)
 
 19. **Custom hooks** -- exception handling (`check_exception_handling.py`), print/logging bans (`check_print_statements.py`), timeless comments (`check_timeless_comments.py`), future annotations (`fix_future_annotations.py`), and tests-verify-public-behaviour (`check_private_test_imports.py`, which forbids tests from importing leading-underscore first-party symbols so they exercise the public surface instead of internal shape). Read each script from `scripts/` to understand behavior and adapt to the target repo.
-20. **Hygiene hooks** -- trailing whitespace, end-of-file-fixer, large files, merge conflicts, debug statements, private key detection, plus `detect-secrets` for entropy-based secret scanning. Standard pre-commit hooks from the pre-commit-hooks repo and `Yelp/detect-secrets`. **Out of scope:** personal/prod strings (internal hostnames, real usernames, prod URLs). Any mechanism for these either commits the pattern (defeating the point) or requires per-user config strictify cannot bootstrap -- users who care should add a local hook that reads patterns from a gitignored file.
-21. **Doc gardening** -- detect stale documentation that does not reflect actual code behavior. Set up infrastructure appropriate to the project's maturity: a pre-commit hook, a CI job, or guidance for a recurring agent task that scans for drift and opens fix-up PRs. Pair with the *keep code and docs coupled* principle in the `CONVENTIONS.md` design doc (Phase 3): leave `NOTE:` back-pointers at code sites whose values are documented elsewhere, so the two don't drift.
-22. **Taste enforcer** -- hookify rule that captures ongoing user preferences. When the user expresses a coding preference, determine whether it can be codified as a pre-commit hook script, a hookify rule, or a pyproject.toml setting, then create or update the enforcement mechanism.
+20. **Hygiene hooks** -- use `prek`'s native built-ins for trailing whitespace, end-of-file fixes, JSON/TOML/YAML validation, large files, merge conflicts, private keys, case-conflicting paths, broken/destroyed symlinks, byte-order markers, mixed line endings, and executable/shebang consistency; pair them with `detect-secrets` for entropy-based secret scanning. **Out of scope:** personal/prod strings (internal hostnames, real usernames, prod URLs). Any mechanism for these either commits the pattern (defeating the point) or requires per-user config strictify cannot bootstrap -- users who care should add a local hook that reads patterns from a gitignored file.
+21. **Doc gardening** -- detect stale documentation that does not reflect actual code behavior. Set up infrastructure appropriate to the project's maturity: a prek hook, a CI job, or guidance for a recurring agent task that scans for drift and opens fix-up PRs. Pair with the *keep code and docs coupled* principle in the `CONVENTIONS.md` design doc (Phase 3): leave `NOTE:` back-pointers at code sites whose values are documented elsewhere, so the two don't drift.
+22. **Taste enforcer** -- hookify rule that captures ongoing user preferences. When the user expresses a coding preference, determine whether it can be codified as a prek hook script, a hookify rule, or a pyproject.toml setting, then create or update the enforcement mechanism.
 
 ## Phase 3: Apply
 
@@ -87,11 +88,11 @@ For each approved category, perform the following. Read the referenced files bef
 ### Configuration merging
 
 - **Merge into `pyproject.toml`** -- read `references/pyproject-strict.md` for strict tool configurations. Merge sections: never remove existing settings, only add or tighten. Create `pyproject.toml` if it does not exist.
-- **Merge into `.pre-commit-config.yaml`** -- read `references/pre-commit-config.md` for the complete template. Add missing repos and hooks. Create the file if it does not exist.
+- **Merge into `prek.toml`** -- read `references/prek-config.md` for the complete native template. Add missing repositories and hooks. Create the file if it does not exist. If a legacy YAML hook config exists, migrate its behavior into `prek.toml` and remove the legacy file; never leave two competing hook configs.
 
 ### Scripts and assets
 
-- **Copy and adapt scripts** -- read each script from `scripts/` (check_exception_handling.py, check_print_statements.py, check_file_length.py, check_timeless_comments.py, check_private_test_imports.py, fix_future_annotations.py). Adapt paths and package names to the target repo. Write to `scripts/pre_commit_hooks/` in the target repo. `check_private_test_imports.py` auto-detects first-party packages from the target's layout, so it needs no per-repo edit (pass `--package` only to override).
+- **Copy and adapt scripts** -- read each script from `scripts/` (check_exception_handling.py, check_print_statements.py, check_file_length.py, check_timeless_comments.py, check_private_test_imports.py, fix_future_annotations.py). Adapt paths and package names to the target repo. Write to `scripts/prek_hooks/` in the target repo. `check_private_test_imports.py` auto-detects first-party packages from the target's layout, so it needs no per-repo edit (pass `--package` only to override).
 - **Beartype integration** -- read `references/beartype-setup.md`. Modify the package `__init__.py` to insert `beartype_this_package()`.
 - **Hookify rules** -- copy from `assets/` (taste-enforcer, no-junk-drawers) to the target repo's `.claude/` directory. Only these two are shipped as hooks: a prompt-keyword trigger and a filename match, both mechanical and low-false-positive. The judgment-based design principles that used to be hookify rules now live in the `CONVENTIONS.md` design doc (see *Infrastructure setup* below).
 - **Design conventions doc** -- copy `assets/CONVENTIONS.md-EXAMPLE` to the target as `CONVENTIONS.md`, then adapt it: trim principles that do not fit, sharpen examples to use the repo's real types, add repo-specific conventions. It seeds judgment-based principles too nuanced for a regex hook -- composition over inheritance, parse-don't-validate, semantic types, and code/doc coupling. Append a pointer line to the repo's `CLAUDE.md`/`AGENTS.md` (e.g. "See `CONVENTIONS.md` for design principles") so agents load it. This is an agent-legibility artifact alongside `docs/ARCHITECTURE.md` and `docs/QUALITY.md`.
@@ -100,13 +101,13 @@ For each approved category, perform the following. Read the referenced files bef
 
 Detect the package manager and run the appropriate install command:
 
-- **uv**: `uv add --dev ruff mypy beartype vulture pytest pytest-xdist pytest-cov pytest-timeout pytest-asyncio pyupgrade flynt pre-commit`
+- **uv**: `uv add --dev ruff mypy beartype vulture pytest pytest-xdist pytest-cov pytest-timeout pytest-asyncio pyupgrade flynt prek`; add `deptry` only when category 8 applies
 - **pip**: `pip install` equivalent
 - **poetry**: `poetry add --group dev` equivalent
 
 ### Infrastructure setup
 
-- Run `pre-commit install` to activate hooks.
+- Run `prek install` to activate hooks.
 - **Architecture codemap**: create `docs/ARCHITECTURE.md` -- a short bird's-eye problem statement, a codemap of the coarse-grained modules and how they relate, and the load-bearing invariants (including deliberate absences). Name entities so they are greppable; do not link to specific lines.
 - **Architectural layers**: if the project warrants it, add dependency-direction lint rules and record the layers in the codemap.
 - **Quality scorecard**: create `docs/QUALITY.md` with initial grades per module.
@@ -118,7 +119,10 @@ Detect the package manager and run the appropriate install command:
 When existing configuration already exists:
 
 - **Merge-up** -- read existing config, add missing strict settings, tighten existing ones
-- **Never remove** user settings -- only add or tighten
+- **Never remove** user settings -- only add or tighten. The sole format-migration
+  exception is a legacy YAML hook config: translate all of its behavior into
+  `prek.toml`, verify the native config, then remove the obsolete file so there is
+  one hook runner and one source of truth.
 - **Present diff** -- show current state -> proposed change for every modification
 - **User veto** -- the user can reject any category before application
 - **Bias strict** -- default is to apply everything; the user opts out, not in
@@ -129,13 +133,13 @@ Detailed configs, scripts, and assets live in the skill's bundled resources. Rea
 
 ### Reference Files
 
-- **`references/pyproject-strict.md`** -- strict tool configurations for ruff, mypy, pytest, coverage, and vulture sections in pyproject.toml
-- **`references/pre-commit-config.md`** -- complete .pre-commit-config.yaml template with all hook repos and local hook definitions
+- **`references/pyproject-strict.md`** -- strict tool configurations for ruff, mypy, pytest, coverage, vulture, and conditional deptry sections in pyproject.toml
+- **`references/prek-config.md`** -- complete native `prek.toml` template with built-in, remote, conditional integrity, and local hook definitions
 - **`references/beartype-setup.md`** -- beartype integration guide: `beartype_this_package()` snippet, `BeartypeConf` options, common issues, and install commands per package manager
 
 ### Scripts
 
-Custom pre-commit hook scripts in `scripts/`. All scripts accept filenames as arguments, report violations as `{file}:{line}: {message} -- {remediation}` (agent-readable), exit nonzero on failure, and support `# allow: {hook-name}` per-line exemptions.
+Custom prek hook scripts in `scripts/`. All scripts accept filenames as arguments, report violations as `{file}:{line}: {message} -- {remediation}` (agent-readable), exit nonzero on failure, and support `# allow: {hook-name}` per-line exemptions.
 
 - **`scripts/check_exception_handling.py`** -- detects bare `except:`, swallowed exceptions, exception handlers with only `pass`
 - **`scripts/check_print_statements.py`** -- bans `print()` in production code, detects unstructured logging patterns

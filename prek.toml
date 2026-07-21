@@ -1,0 +1,44 @@
+# Run with:      uvx prek run --all-files
+# Install hooks: uvx prek install
+#
+# This repo is a Claude Code plugin, not a Python package: most of strictify's
+# own 22 categories don't apply here (no package, no tests, no runtime). This
+# config is the sensible subset that does -- repo-agnostic hygiene, Ruff and
+# mypy scoped to the plugin's hook payloads, and a guard on the load-bearing
+# category count. See ARCHITECTURE.md.
+
+minimum_prek_version = "0.3.2"
+default_language_version.python = "python3"
+
+# Native prek hooks: fast, offline, and intentionally incompatible with the
+# retired runner.
+[[repos]]
+repo = "builtin"
+hooks = [
+    {id = "trailing-whitespace"},
+    {id = "end-of-file-fixer"},
+    {id = "check-json"},
+    {id = "check-toml"},
+    {id = "check-yaml"},
+    {id = "check-merge-conflict"},
+    {id = "detect-private-key"},
+    {id = "check-added-large-files"},
+    {id = "check-case-conflict"},
+    {id = "check-symlinks"},
+    {id = "destroyed-symlinks"},
+    {id = "fix-byte-order-marker"},
+    {id = "mixed-line-ending"},
+    {id = "check-executables-have-shebangs"},
+    {id = "check-shebang-scripts-are-executable"},
+]
+
+# Ruff and mypy run from prek-managed Python environments. The checks are scoped
+# to the plugin's shipped hook payloads.
+[[repos]]
+repo = "local"
+hooks = [
+    {id = "ruff-check", name = "Ruff check", entry = "ruff check --config ruff.toml --fix --quiet", language = "python", additional_dependencies = ["ruff==0.15.20"], files = "^skills/strictify/scripts/", types = ["python"]},
+    {id = "ruff-format", name = "Ruff format", entry = "ruff format --config ruff.toml --quiet", language = "python", additional_dependencies = ["ruff==0.15.20"], files = "^skills/strictify/scripts/", types = ["python"]},
+    {id = "mypy", name = "mypy", entry = "mypy --config-file mypy.ini", language = "python", additional_dependencies = ["mypy==1.17.0"], files = "^skills/strictify/scripts/", types = ["python"]},
+    {id = "check-category-count", name = "Check category count consistency", entry = "python3 tools/check_category_count.py", language = "system", pass_filenames = false, always_run = true},
+]
