@@ -402,3 +402,28 @@ extend_exclude = ["scripts/prek_hooks"]
   `[dependency-groups]` entries are recognized as development dependencies directly.
 - Add generated code, migrations, or host-loaded plugin modules to `extend_exclude`
   only after confirming deptry cannot model the import boundary accurately.
+
+---
+
+## [tool.uv] -- Dependency Cooldown
+
+Applies only to uv-managed repos. `exclude-newer` stops uv from resolving package
+versions published within the last 3 days.
+
+- This is a security measure against supply-chain breaches: malicious releases uploaded
+  to PyPI are usually detected and yanked within hours or days, so a short cooldown
+  window means compromised versions are removed before they can ever reach the
+  environment.
+- Requires uv >= 0.9.17 (relative durations). The duration is resolved to a concrete
+  timestamp when the lockfile is written and only moves forward when the lockfile is
+  invalidated (e.g., `--upgrade`), so day-to-day runs do not churn `uv.lock`.
+- When a security fix must land inside the window, override the single package with
+  `exclude-newer-package` (a timestamp, a shorter duration, or `false` to exempt it)
+  instead of loosening the global cooldown.
+
+```toml
+[tool.uv]
+# Security measure: 3-day dependency cooldown so malicious releases are caught
+# and yanked from PyPI before they can reach this environment.
+exclude-newer = "3 days"
+```
