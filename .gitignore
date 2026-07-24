@@ -1,3 +1,4 @@
 .worktrees/
 .new-feature/
 *.local.toml
+__pycache__/

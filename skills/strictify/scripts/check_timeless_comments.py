@@ -20,8 +20,11 @@ Exit codes:
   1 - Violations found
 """
 
+import ast
+import io
 import re
 import sys
+import tokenize
 from pathlib import Path
 
 # Keywords that indicate temporal language in comments
@@ -62,42 +65,54 @@ TEMPORAL_KEYWORDS = [
 
 
 def extract_comments(file_path: Path) -> list[tuple[int, str]]:
-    """Extract all comments from a Python file.
+    """Extract comments and actual Python docstrings from a Python file.
 
     Returns list of (line_number, comment_text) tuples.
     """
     try:
-        lines = file_path.read_text(encoding="utf-8").splitlines(keepends=True)
+        content = file_path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
         return []
 
-    comments = []
-    in_docstring = False
-    docstring_delimiter: str | None = None
+    comments: set[tuple[int, str]] = set()
 
-    for line_num, line in enumerate(lines, start=1):
-        stripped = line.strip()
+    # Tokenization distinguishes comments from ``#`` characters inside strings.
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(content).readline)
+        for token in tokens:
+            if token.type == tokenize.COMMENT:
+                comments.add((token.start[0], token.string))
+    except (IndentationError, tokenize.TokenError):
+        # Preserve comments tokenized before malformed input stopped the stream.
+        pass
 
-        # Handle docstrings
-        if in_docstring:
-            comments.append((line_num, line))
-            if docstring_delimiter is not None and docstring_delimiter in line:
-                in_docstring = False
-        elif stripped.startswith(('"""', "'''")):
-            docstring_delimiter = '"""' if stripped.startswith('"""') else "'''"
-            in_docstring = True
-            comments.append((line_num, line))
+    # AST position data distinguishes real module/class/function docstrings from
+    # arbitrary triple-quoted strings used as fixtures or assigned values.
+    try:
+        tree = ast.parse(content, filename=str(file_path))
+    except SyntaxError:
+        return sorted(comments)
 
-            # Check if docstring ends on same line
-            if stripped.count(docstring_delimiter) >= 2:
-                in_docstring = False
-        elif "#" in line:
-            # Regular comment - extract everything after the first #
-            comment_start = line.find("#")
-            comment_text = line[comment_start:]
-            comments.append((line_num, comment_text))
+    lines = content.splitlines()
+    docstring_containers = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+    for node in ast.walk(tree):
+        if not isinstance(node, docstring_containers) or not node.body:
+            continue
 
-    return comments
+        first_statement = node.body[0]
+        if not (
+            isinstance(first_statement, ast.Expr)
+            and isinstance(first_statement.value, ast.Constant)
+            and isinstance(first_statement.value.value, str)
+        ):
+            continue
+
+        start = first_statement.lineno
+        end = first_statement.end_lineno or start
+        for line_num in range(start, end + 1):
+            comments.add((line_num, lines[line_num - 1]))
+
+    return sorted(comments)
 
 
 def _has_allow_comment(file_path: Path, line_num: int) -> bool:

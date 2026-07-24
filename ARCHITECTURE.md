@@ -1,20 +1,23 @@
 # Architecture
 
-Strictify is a [Claude Code plugin](https://docs.claude.com/en/docs/claude-code-plugins),
-not a runnable program. It is a bundle of *instructions and assets* that teach an
-agent how to add opinionated Python code-quality enforcement to some *other* repo.
+Strictify is a Claude Code and Codex plugin, not a runnable program. It is a bundle
+of *instructions and assets* that teach an agent how to add opinionated Python
+code-quality enforcement to some *other* repo. Both hosts read the same
+`.claude-plugin` marketplace metadata and `skills/strictify/SKILL.md`; duplicating
+those declarations in a second manifest would create version and description drift.
 There is no strictify runtime: the agent reads the skill, follows its three-phase
-workflow (analyze → propose → apply), and writes config, scripts, and hookify rules
-into the target repo. This document is a map of where things live, not how each rule
-works — the rules document themselves.
+workflow (analyze → propose → apply), and writes config and scripts into the target
+repo. Claude Code also consumes the bundled hookify rules. This document is a map
+of where things live, not how each rule works — the rules document themselves.
 
 ## Codemap
 
 ### `.claude-plugin/`
 
-Plugin manifest. `plugin.json` declares name, version, and description;
-`marketplace.json` lets the repo be installed as a single-plugin marketplace. These
-two files must agree on name and version. No behavior lives here.
+Cross-host plugin manifest. `plugin.json` declares name, version, and description;
+`marketplace.json` lets the repo be installed as a single-plugin marketplace in
+Claude Code or Codex. These two files must agree on name and version. No behavior
+lives here.
 
 ### `commands/strictify.md`
 
@@ -55,9 +58,10 @@ The heart of the plugin.
   prek, …) it installs into the *target* repo. Strictify itself has no
   dependencies to install and nothing to import.
 - **Hook scripts are self-contained and stdlib-only.** Every script in `scripts/`
-  imports nothing beyond the standard library (`argparse`, `ast`, `re`, `sys`,
-  `pathlib`) so it can be dropped into any target repo and run under prek
-  without adding dependencies.
+  imports nothing beyond the standard library (`argparse`, `ast`, `io`, `re`,
+  `sys`, `tokenize`, `pathlib`) so it can be dropped into any target repo and
+  run under prek without adding dependencies. A small stdlib-only regression
+  suite exercises behavior that is easy for text heuristics to misclassify.
 - **Agent-readable output.** Every hook reports violations as
   `{file}:{line}: {message} -- {remediation}`, exits nonzero on failure, and honors
   `# allow: {hook-name}` per-line exemptions. This contract is what lets both humans
