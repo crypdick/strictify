@@ -1,10 +1,17 @@
 # strictify
 
-A [Claude Code plugin](https://docs.claude.com/en/docs/claude-code-plugins) that applies opinionated Python code quality enforcement to any repo.
+A Claude Code and Codex plugin that applies opinionated Python code quality
+enforcement to any repo.
 
-Run `/strictify` in any Python project. It analyzes what's already in place, proposes strictness additions across 22 categories, and applies approved changes — including self-reinforcing [hookify](https://github.com/anthropics/claude-code-plugins/tree/main/hookify) rules that capture your taste preferences as you work.
+Run `/strictify` in Claude Code, or ask Codex to “strictify this repo,” from any
+Python project. It analyzes what's already in place, proposes strictness additions
+across 22 categories, and applies approved changes — including self-reinforcing
+[hookify](https://github.com/anthropics/claude-code-plugins/tree/main/hookify) rules
+for Claude Code that capture your taste preferences as you work.
 
 ## Install
+
+### Claude Code
 
 ```
 claude plugins add github:crypdick/strictify
@@ -24,6 +31,16 @@ Or add to `~/.claude/settings.json`:
   }
 }
 ```
+
+### Codex
+
+```
+codex plugin marketplace add crypdick/strictify
+codex plugin add strictify@strictify
+```
+
+Codex reads the same marketplace and skill metadata; a second, duplicated plugin
+manifest is not required.
 
 ## What it does
 

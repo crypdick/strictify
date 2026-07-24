@@ -1,5 +1,5 @@
 # Ruff config for this repo's own Python — the six stdlib-only prek hook
-# scripts under skills/strictify/scripts/ (the only .py in the repo).
+# scripts under skills/strictify/scripts/ and their regression tests.
 #
 # Mirrors the strict config strictify ships in
 # skills/strictify/references/pyproject-strict.md, so the plugin's own payloads
@@ -117,6 +117,7 @@ max-complexity = 15
 
 [lint.per-file-ignores]
 "skills/strictify/scripts/**/*.py" = ["T201"]
+"tests/**/*.py" = ["PT"]
 "tools/check_category_count.py" = ["T201"]
 
 [format]
