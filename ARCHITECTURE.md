@@ -41,8 +41,8 @@ The heart of the plugin.
   the agent reads intent before copying.
 - **`scripts/`** — custom prek hook scripts copied into the target repo's
   `scripts/prek_hooks/`: `check_exception_handling.py`,
-  `check_print_statements.py`, `check_file_length.py`, `check_timeless_comments.py`,
-  `check_private_test_imports.py`, and the `fix_future_annotations.py` fixer.
+  `check_file_length.py`, `check_timeless_comments.py`, and
+  `check_private_test_imports.py`. Ruff owns print/logging and future-import checks.
 - **`assets/`** — files copied into the target repo. `hookify.*.md` rules
   (taste-enforcer, no-junk-drawers) and `agents.red-green-tdd.md` go into `.claude/`;
   only mechanical, low-false-positive matches ship as hooks. `CONVENTIONS.md-EXAMPLE`
@@ -60,8 +60,8 @@ The heart of the plugin.
 - **Hook scripts are self-contained and stdlib-only.** Every script in `scripts/`
   imports nothing beyond the standard library (`argparse`, `ast`, `io`, `re`,
   `sys`, `tokenize`, `pathlib`) so it can be dropped into any target repo and
-  run under prek without adding dependencies. A small stdlib-only regression
-  suite exercises behavior that is easy for text heuristics to misclassify.
+  run under prek without adding dependencies. A unittest regression suite exercises hook behavior and the shipped Ruff
+  configuration; prek supplies pinned Ruff for these integration checks.
 - **Agent-readable output.** Every hook reports violations as
   `{file}:{line}: {message} -- {remediation}`, exits nonzero on failure, and honors
   `# allow: {hook-name}` per-line exemptions. This contract is what lets both humans

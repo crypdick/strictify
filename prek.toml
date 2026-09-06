@@ -4,7 +4,7 @@
 # This repo is a Claude Code plugin, not a Python package: most of strictify's
 # own 22 categories don't apply here (no package or runtime). This config is
 # the sensible subset that does -- repo-agnostic hygiene, Ruff and mypy for
-# the plugin's hook payloads, a stdlib regression suite, and a guard on the
+# the plugin's hook payloads, a unittest/Ruff regression suite, and a guard on the
 # load-bearing category count. See ARCHITECTURE.md.
 
 minimum_prek_version = "0.3.2"
@@ -40,6 +40,6 @@ hooks = [
     {id = "ruff-check", name = "Ruff check", entry = "ruff check --config ruff.toml --fix --quiet", language = "python", additional_dependencies = ["ruff==0.15.20"], files = "^(skills/strictify/scripts|tests)/", types = ["python"]},
     {id = "ruff-format", name = "Ruff format", entry = "ruff format --config ruff.toml --quiet", language = "python", additional_dependencies = ["ruff==0.15.20"], files = "^(skills/strictify/scripts|tests)/", types = ["python"]},
     {id = "mypy", name = "mypy", entry = "mypy --config-file mypy.ini", language = "python", additional_dependencies = ["mypy==1.17.0"], files = "^skills/strictify/scripts/", types = ["python"]},
-    {id = "unit-tests", name = "Hook script unit tests", entry = "python3 -m unittest discover -s tests", language = "system", pass_filenames = false, always_run = true},
+    {id = "unit-tests", name = "Hook script unit tests", entry = "python -m unittest discover -s tests", language = "python", additional_dependencies = ["ruff==0.15.20"], pass_filenames = false, always_run = true},
     {id = "check-category-count", name = "Check category count consistency", entry = "python3 tools/check_category_count.py", language = "system", pass_filenames = false, always_run = true},
 ]

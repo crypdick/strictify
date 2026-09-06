@@ -96,32 +96,37 @@ Coerce unstructured data into constrained types at the boundary of the system, s
 downstream code never re-validates. Don't check a condition and then discard the proof.
 
 ```python
-# AVOID: validate and throw the evidence away
-def process(data: dict) -> None:
-    if "user_id" not in data:
-        raise ValueError("missing user_id")   # checked, then discarded
+from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import NewType
 
-# PREFER: parse into a type that carries the proof
+UserId = NewType("UserId", str)
+
 @dataclass(frozen=True)
 class UserRequest:
-    user_id: UserId          # construction IS validation; if it exists, it's valid
+    user_id: UserId
 
-def process(request: UserRequest) -> None:
-    ...                      # no re-validation — the type proves it
+def parse_user_request(data: object) -> UserRequest:
+    if not isinstance(data, Mapping):
+        raise TypeError("Expected a user request mapping")
+    user_id = data.get("user_id")
+    if not isinstance(user_id, str) or not user_id:
+        raise ValueError("user_id must be a nonempty string")
+    return UserRequest(user_id=UserId(user_id))
 ```
 
-Use Pydantic models, frozen dataclasses, or `NewType` to carry proof through the type
-system. The same boundary applies to untyped third-party clients (SDKs, HTTP responses,
-DB rows): wrap them in a thin typed adapter so the weak `dict`/`Any` types stop at the
-edge instead of leaking through the codebase.
+The parser checks external input before constructing the domain value. Neither
+`NewType` nor a frozen dataclass validates types or domain constraints at runtime;
+`frozen=True` prevents ordinary field reassignment. Route untrusted input through
+the parser, then let typed internal functions accept `UserRequest`. If construction
+must enforce invariants everywhere, validate in `__post_init__` or use a validating
+model instead.
 
-**Caveat on Pydantic field validators:** a `@field_validator` runs at runtime but does
-*not* change the static type — a validator confirming `email: str` is well-formed still
-leaves the field typed `str`, so the checker sees no proof and downstream code can
-re-validate or misuse it. To make Pydantic validation *real parsing*, give the proven
-value a distinct type: `Annotated[str, AfterValidator(...)]` bound to a `NewType`/
-branded type, or wrap the model's output in a `NewType`/frozen dataclass at the
-boundary. A plain validator is a check-and-discard, not a parse.
+Apply the same boundary to untyped SDK results, HTTP responses, and DB rows so raw
+values do not leak downstream. Pydantic field validators do perform runtime
+validation; use them for value constraints. A field annotated `str` remains `str`
+for static checking. Add a distinct semantic type when static separation between
+concepts matters, after validating its value.
 
 ---
 

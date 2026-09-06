@@ -182,6 +182,13 @@ max-complexity = 15
 
 ### Per-file ignores
 
+Ruff is the sole owner of print and logging checks (`T201`, `G`, `LOG`).
+Allow print output in tests, tools, scripts, and CLI entry points via the patterns
+below; use `# noqa: T201` for a justified one-line exception elsewhere. Logging
+checks still apply in these locations. Use the specific `G` code for a logging
+exception. Ruff also reports misplaced future imports (`F404`); do not install
+a separate source-rewriting hook for them.
+
 - Test files commonly use unused variables (captured return values), high complexity
   (parameterized setup), many arguments (fixtures), asserts, private-member access,
   and boolean positional helpers. Suppress these categories wholesale for `tests/`.
@@ -193,8 +200,14 @@ max-complexity = 15
 
 ```toml
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["ANN", "ARG", "C901", "FBT", "F841", "PLR0912", "PLR0913", "PLR0915", "S101", "SLF"]
+"tests/**/*.py" = ["ANN", "ARG", "C901", "FBT", "F841", "PLR0912", "PLR0913", "PLR0915", "S101", "SLF", "T201"]
 "scripts/**/*.py" = ["C901", "PLR0912", "PLR0915", "S603", "S607", "T20"]
+"test_*.py" = ["T201"]
+"**/tools/**/*.py" = ["T201"]
+"**/_tools/**/*.py" = ["T201"]
+"**/scripts/**/*.py" = ["T201"]
+"**/tests/**/*.py" = ["T201"]
+"**/{cli,main,__main__}.py" = ["T201"]
 ```
 
 ---

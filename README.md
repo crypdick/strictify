@@ -97,16 +97,17 @@ Judgment-based design principles don't belong in a regex hook — deciding wheth
 
 ### Custom prek hooks
 
-Six scripts are adapted to your repo and installed in `scripts/prek_hooks/`:
+Four scripts are adapted to your repo and installed in `scripts/prek_hooks/`:
 
 | Hook | What it catches |
 |------|----------------|
 | `check_exception_handling.py` | Bare `except:`, swallowed exceptions, `except Exception: pass` |
-| `check_print_statements.py` | `print()` in production code, unstructured logging (f-strings/concat in logger calls) |
 | `check_file_length.py` | Files over 400 logical lines |
 | `check_timeless_comments.py` | Temporal language in comments ("legacy", "old", "deprecated") |
 | `check_private_test_imports.py` | Tests importing private (`_foo`) first-party symbols instead of driving public behaviour |
-| `fix_future_annotations.py` | Misplaced `from __future__ import annotations` |
+
+Ruff owns print/logging checks and misplaced future-import diagnostics. Print
+exemptions live in Ruff configuration or `# noqa: T201`.
 
 All hooks output `{file}:{line}: {message} — {remediation}` so both humans and AI agents can act on violations.
 

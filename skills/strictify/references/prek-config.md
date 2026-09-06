@@ -143,13 +143,6 @@ language = "system"
 types = ["python"]
 
 [[repos.hooks]]
-id = "check-print-statements"
-name = "Check print statements"
-entry = "python scripts/prek_hooks/check_print_statements.py"
-language = "system"
-types = ["python"]
-
-[[repos.hooks]]
 id = "check-timeless-comments"
 name = "Check timeless comments"
 entry = "python scripts/prek_hooks/check_timeless_comments.py"
@@ -167,13 +160,6 @@ types = ["python"]
 id = "check-private-test-imports"
 name = "Forbid private imports in tests"
 entry = "python scripts/prek_hooks/check_private_test_imports.py"
-language = "system"
-types = ["python"]
-
-[[repos.hooks]]
-id = "fix-future-annotations"
-name = "Fix future annotations"
-entry = "python scripts/prek_hooks/fix_future_annotations.py"
 language = "system"
 types = ["python"]
 
@@ -207,3 +193,10 @@ always_run = true
    target's package-manager invocation.
 8. **Monorepos need explicit scope.** Duplicate or wrap package-scoped hooks when the
    target contains multiple importable packages.
+
+9. **Replace overlapping hooks on existing installs.** Remove Strictify's
+   `check-print-statements` and `fix-future-annotations` hook entries and their copied
+   scripts after configuring Ruff. Translate justified `# allow: print-statements`
+   exemptions to `# noqa: T201` and logging exemptions to the specific Ruff `G` code.
+   Preserve any repo-specific behavior in adapted scripts before removing them.
+   Ruff owns print/logging detection and reports misplaced future imports (`F404`).

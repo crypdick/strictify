@@ -55,7 +55,7 @@ First, use the Phase 1 analysis to filter to the categories that actually fit th
 7. **Vulture** -- dead code detection with sensible ignore list. Read `references/pyproject-strict.md` for `min_confidence` and ignore settings.
 8. **Dependency and package integrity** -- when the repo has reliable dependency metadata, add `deptry` to catch missing, unused, transitive, and misplaced development dependencies. Validate `pyproject.toml` when the configured schemas cover the selected tools, but never weaken valid tool configuration to appease a stale third-party schema. For a publishable Python distribution, add `check-sdist`; skip it for applications and non-packaged repos. For uv-managed repos, set `exclude-newer = "3 days"` in `[tool.uv]` -- a dependency cooldown that avoids supply-chain security breaches by refusing freshly published releases until the ecosystem has had time to catch and yank malicious uploads. Read `references/pyproject-strict.md` and `references/prek-config.md` for the conditional configuration.
 9. **Pyupgrade + flynt** -- modernize syntax to the project's target Python version. Automates f-string conversion and syntax upgrades.
-10. **Structured logging** -- detect unstructured logging patterns (string concatenation, %-formatting, f-strings in log calls) and nudge toward stdlib-compatible structured `logger.info("message", extra={"key": value})` style.
+10. **Structured logging** -- use Ruff as the sole detector for print/logging checks; configure print exemptions in its per-file ignores and use narrow `# noqa` comments. Detect unstructured logging patterns (string concatenation, %-formatting, f-strings in log calls) and nudge toward stdlib-compatible structured `logger.info("message", extra={"key": value})` style.
 
 ### Testing & Coverage (categories 11-12)
 
@@ -76,7 +76,7 @@ First, use the Phase 1 analysis to filter to the categories that actually fit th
 
 ### Ongoing Enforcement (categories 19-22)
 
-19. **Custom hooks** -- exception handling (`check_exception_handling.py`), print/logging bans (`check_print_statements.py`), timeless comments (`check_timeless_comments.py`), future annotations (`fix_future_annotations.py`), and tests-verify-public-behaviour (`check_private_test_imports.py`, which forbids tests from importing leading-underscore first-party symbols so they exercise the public surface instead of internal shape). Read each script from `scripts/` to understand behavior and adapt to the target repo.
+19. **Custom hooks** -- exception handling (`check_exception_handling.py`), timeless comments (`check_timeless_comments.py`), and tests-verify-public-behaviour (`check_private_test_imports.py`, which forbids tests from importing leading-underscore first-party symbols so they exercise the public surface instead of internal shape). Read each script from `scripts/` to understand behavior and adapt to the target repo.
 20. **Hygiene hooks** -- use `prek`'s native built-ins for trailing whitespace, end-of-file fixes, JSON/TOML/YAML validation, large files, merge conflicts, private keys, case-conflicting paths, broken/destroyed symlinks, byte-order markers, mixed line endings, and executable/shebang consistency; pair them with `detect-secrets` for entropy-based secret scanning. **Out of scope:** personal/prod strings (internal hostnames, real usernames, prod URLs). Any mechanism for these either commits the pattern (defeating the point) or requires per-user config strictify cannot bootstrap -- users who care should add a local hook that reads patterns from a gitignored file.
 21. **Doc gardening** -- detect stale documentation that does not reflect actual code behavior. Set up infrastructure appropriate to the project's maturity: a prek hook, a CI job, or guidance for a recurring agent task that scans for drift and opens fix-up PRs. Pair with the *keep code and docs coupled* principle in the `CONVENTIONS.md` design doc (Phase 3): leave `NOTE:` back-pointers at code sites whose values are documented elsewhere, so the two don't drift.
 22. **Taste enforcer** -- hookify rule that captures ongoing user preferences. When the user expresses a coding preference, determine whether it can be codified as a prek hook script, a hookify rule, or a pyproject.toml setting, then create or update the enforcement mechanism.
@@ -92,16 +92,17 @@ For each approved category, perform the following. Read the referenced files bef
 
 ### Scripts and assets
 
-- **Copy and adapt scripts** -- read each script from `scripts/` (check_exception_handling.py, check_print_statements.py, check_file_length.py, check_timeless_comments.py, check_private_test_imports.py, fix_future_annotations.py). Adapt paths and package names to the target repo. Write to `scripts/prek_hooks/` in the target repo. `check_private_test_imports.py` auto-detects first-party packages from the target's layout, so it needs no per-repo edit (pass `--package` only to override).
+- **Copy and adapt scripts** -- read each script from `scripts/` (check_exception_handling.py, check_file_length.py, check_timeless_comments.py, check_private_test_imports.py). Adapt paths and package names to the target repo. Write to `scripts/prek_hooks/` in the target repo. `check_private_test_imports.py` auto-detects first-party packages from the target's layout, and flat Python modules. For namespace packages or other layouts, pass explicit `--package` names identified during analysis.
 - **Beartype integration** -- read `references/beartype-setup.md`. Modify the package `__init__.py` to insert `beartype_this_package()`.
 - **Hookify rules** -- copy from `assets/` (taste-enforcer, no-junk-drawers) to the target repo's `.claude/` directory. Only these two are shipped as hooks: a prompt-keyword trigger and a filename match, both mechanical and low-false-positive. The judgment-based design principles that used to be hookify rules now live in the `CONVENTIONS.md` design doc (see *Infrastructure setup* below).
 - **Design conventions doc** -- copy `assets/CONVENTIONS.md-EXAMPLE` to the target as `CONVENTIONS.md`, then adapt it: trim principles that do not fit, sharpen examples to use the repo's real types, add repo-specific conventions. It seeds judgment-based principles too nuanced for a regex hook -- composition over inheritance, parse-don't-validate, semantic types, and code/doc coupling. Append a pointer line to the repo's `CLAUDE.md`/`AGENTS.md` (e.g. "See `CONVENTIONS.md` for design principles") so agents load it. This is an agent-legibility artifact alongside `docs/ARCHITECTURE.md` and `docs/QUALITY.md`.
 
-### Dev dependencies
+### Dependencies
 
 Detect the package manager and run the appropriate install command:
 
-- **uv**: `uv add --dev ruff mypy beartype vulture pytest pytest-xdist pytest-cov pytest-timeout pytest-asyncio pyupgrade flynt prek`; add `deptry` only when category 8 applies
+- **uv**: `uv add --dev ruff mypy vulture pytest pytest-xdist pytest-cov pytest-timeout pytest-asyncio pyupgrade flynt prek`; add `deptry` only when category 8 applies
+- **Runtime dependency:** when category 4 applies, run `uv add beartype` (or `poetry add beartype`); for pip, persist it in runtime requirements. Never put it only in a development group: production `__init__.py` imports it. Verify a package import in an environment installed without development dependencies.
 - **pip**: `pip install` equivalent
 - **poetry**: `poetry add --group dev` equivalent
 
@@ -142,11 +143,9 @@ Detailed configs, scripts, and assets live in the skill's bundled resources. Rea
 Custom prek hook scripts in `scripts/`. All scripts accept filenames as arguments, report violations as `{file}:{line}: {message} -- {remediation}` (agent-readable), exit nonzero on failure, and support `# allow: {hook-name}` per-line exemptions.
 
 - **`scripts/check_exception_handling.py`** -- detects bare `except:`, swallowed exceptions, exception handlers with only `pass`
-- **`scripts/check_print_statements.py`** -- bans `print()` in production code, detects unstructured logging patterns
 - **`scripts/check_file_length.py`** -- enforces max 400 logical lines per file
 - **`scripts/check_timeless_comments.py`** -- detects temporal keywords in comments (legacy, new, old, TODO, FIXME, HACK, temporary)
 - **`scripts/check_private_test_imports.py`** -- forbids tests from importing leading-underscore first-party symbols; auto-detects first-party packages, supports `--package` overrides and a `# allow: private-test-imports` carve-out
-- **`scripts/fix_future_annotations.py`** -- ensures `from __future__ import annotations` is placed correctly; runs as a fixer
 
 ### Assets
 

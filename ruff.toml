@@ -1,4 +1,4 @@
-# Ruff config for this repo's own Python — the six stdlib-only prek hook
+# Ruff config for this repo's own Python — the four stdlib-only prek hook
 # scripts under skills/strictify/scripts/ and their regression tests.
 #
 # Mirrors the strict config strictify ships in

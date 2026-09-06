@@ -13,7 +13,7 @@ Detects:
   per-name form inside a parenthesised multi-line import
 
 First-party packages are auto-detected from the repository layout (top-level
-or ``src/`` directories containing ``__init__.py``). Pass ``--package NAME``
+or ``src/`` directories containing ``__init__.py``, plus Python modules). Pass ``--package NAME``
 (repeatable) to override detection.
 
 Allowed:
@@ -56,8 +56,8 @@ _SKIP_DIRS = frozenset(
 def detect_first_party_packages(root: Path) -> set[str]:
     """Return the set of importable top-level first-party package names.
 
-    A first-party package is a directory containing ``__init__.py`` at the repo
-    root or under ``src/``. Tooling and test directories are excluded. When the
+    First-party names include Python modules and directories containing
+    ``__init__.py`` at the repo root or under ``src/``. Tooling and test directories are excluded. When the
     repo ships no importable package (e.g. a docs-only repo) the result is empty
     and the hook flags nothing.
     """
@@ -67,7 +67,15 @@ def detect_first_party_packages(root: Path) -> set[str]:
         if not search_root.is_dir():
             continue
         for child in search_root.iterdir():
-            if not child.is_dir() or child.name.startswith("."):
+            if child.name.startswith("."):
+                continue
+            if child.is_file() and child.suffix == ".py":
+                if (
+                    child.stem.isidentifier()
+                    and child.stem not in {"__init__", "conftest", "setup"}
+                    and not child.stem.startswith("test_")
+                ):
+                    packages.add(child.stem)
                 continue
             if child.name in _SKIP_DIRS:
                 continue
