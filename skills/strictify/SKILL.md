@@ -47,13 +47,13 @@ First, use the Phase 1 analysis to filter to the categories that actually fit th
 2. **Ruff** -- curated anti-slop lint rules (core `E`/`W`/`F`/`I`, `B`, `UP`, `C4`, `SIM`, `RUF`, complexity `C90`, selected annotation/docstring checks, plus high-signal families for async, exceptions, logging, performance, security, pytest, pathlib, suppressions, private access, debugger/print bans, executable scripts, and import/package boundaries) and format config. Do not enable `ALL`, top-level preview mode, or unsafe fixes. Exact preview lint rules may be enabled only with lint-scoped preview mode and `explicit-preview-rules = true`. Read `references/pyproject-strict.md` for exact settings. Ruff owns cyclomatic-complexity enforcement through `C901`; do not add a second complexity tool.
 3. **mypy** -- `strict = true` with pragmatic exceptions for the project's frameworks. Read `references/pyproject-strict.md` for strict mypy config and framework overrides.
 4. **Beartype** -- add dependency, insert `beartype_this_package()` in package `__init__.py`. Read `references/beartype-setup.md` for integration patterns and common issues.
-5. **Semantic typing** -- recorded as a principle in the `CONVENTIONS.md` design doc (Phase 3): give domain concepts (user IDs, amounts, slugs) a distinct `NewType`/`TypeAlias` instead of a bare primitive. Deciding *which* primitives carry domain meaning is a judgment call, so it lives in the conventions doc for the agent to apply, not a regex hook.
-6. **Parse-don't-validate** -- recorded as a principle in the `CONVENTIONS.md` design doc (Phase 3): coerce unstructured data into constrained types (Pydantic models, frozen dataclasses, `NewType`) at the boundary and carry proof through types, instead of re-validating downstream. Includes the Pydantic-validator caveat -- a `@field_validator` that doesn't change the static type is a check-and-discard, not a parse.
+5. **Semantic typing** -- recorded as a principle in the `CONVENTIONS.md` design doc (Phase 3): give domain concepts (user IDs, amounts, slugs) a distinct `NewType` instead of a bare primitive (`TypeAlias` only supplies another name for the same type). Deciding *which* primitives carry domain meaning is a judgment call, so it lives in the conventions doc for the agent to apply, not a regex hook.
+6. **Parse-don't-validate** -- recorded as a principle in the `CONVENTIONS.md` design doc (Phase 3): coerce unstructured data into constrained types (Pydantic models, frozen dataclasses, `NewType`) at the boundary and carry proof through types, instead of re-validating downstream. Pydantic validators enforce runtime value constraints; use a distinct semantic type as well when static separation between concepts matters. Neither `NewType` nor a frozen dataclass validates untrusted input by itself.
 
 ### Code Health (categories 7-10)
 
 7. **Vulture** -- dead code detection with sensible ignore list. Read `references/pyproject-strict.md` for `min_confidence` and ignore settings.
-8. **Dependency and package integrity** -- when the repo has reliable dependency metadata, add `deptry` to catch missing, unused, transitive, and misplaced development dependencies. Validate `pyproject.toml` when the configured schemas cover the selected tools, but never weaken valid tool configuration to appease a stale third-party schema. For a publishable Python distribution, add `check-sdist`; skip it for applications and non-packaged repos. For uv-managed repos, set `exclude-newer = "3 days"` in `[tool.uv]` -- a dependency cooldown that avoids supply-chain security breaches by refusing freshly published releases until the ecosystem has had time to catch and yank malicious uploads. Read `references/pyproject-strict.md` and `references/prek-config.md` for the conditional configuration.
+8. **Dependency and package integrity** -- when the repo has reliable dependency metadata, add `deptry` to catch missing, unused, transitive, and misplaced development dependencies. Validate `pyproject.toml` when the configured schemas cover the selected tools, but never weaken valid tool configuration to appease a stale third-party schema. For a publishable Python distribution, add `check-sdist`; skip it for applications and non-packaged repos. For uv-managed repos, set `exclude-newer = "3 days"` in `[tool.uv]` -- a dependency cooldown that delays adoption of freshly published releases; it reduces exposure but does not establish that a dependency is safe. Read `references/pyproject-strict.md` and `references/prek-config.md` for the conditional configuration.
 9. **Pyupgrade + flynt** -- modernize syntax to the project's target Python version. Automates f-string conversion and syntax upgrades.
 10. **Structured logging** -- use Ruff as the sole detector for print/logging checks; configure print exemptions in its per-file ignores and use narrow `# noqa` comments. Detect unstructured logging patterns (string concatenation, %-formatting, f-strings in log calls) and nudge toward stdlib-compatible structured `logger.info("message", extra={"key": value})` style.
 
@@ -66,7 +66,7 @@ First, use the Phase 1 analysis to filter to the categories that actually fit th
 
 13. **Filesystem discipline** -- file length limits (400 lines). Hookify rule warning on `utils.py`/`helpers.py`/`misc.py` creation. The problem is not shared code -- it is anonymous shared code. If a shared utility is needed, name it after what it does.
 14. **Architecture codemap** -- create `docs/ARCHITECTURE.md`: a short bird's-eye map that tells a newcomer (human or agent) *where* things live, not *how* they work. Include a one-paragraph statement of the problem the codebase solves, a codemap of the coarse-grained modules/packages and how they relate, and the load-bearing architectural invariants -- including things deliberately *absent* (e.g. "the domain layer never imports Django"). Name important files, modules, and types explicitly so they are greppable. Keep it short and do not link to specific lines (links rot); it is a mental model, not an index. This is the primary agent-legibility artifact -- valuable for every project regardless of size. Revisit it a couple of times a year rather than syncing it to every change.
-15. **Architectural layer enforcement** -- analyze the project's domain structure and propose dependency-direction rules. For a Django project: models -> services -> views -> urls. For a CLI tool: parsing -> domain -> output. For a data pipeline: extract -> transform -> load. Figure out the appropriate layers for the target project, create custom lint rules enforcing valid dependency edges, and record the layers and their invariants in the `docs/ARCHITECTURE.md` codemap (category 14). Scale to project size: lightweight or no lint rules for small projects (the category-14 codemap still applies), more rigid for larger ones.
+15. **Architectural layer enforcement** -- analyze the project's domain structure and propose dependency-direction rules. Describe each arrow explicitly as “imports”: for example, views -> services -> models when that matches the project. Do not confuse execution order (such as extract, transform, load) with allowed import dependencies. Figure out the appropriate layers for the target project, create custom lint rules enforcing valid dependency edges, and record the layers and their invariants in the `docs/ARCHITECTURE.md` codemap (category 14). Scale to project size: lightweight or no lint rules for small projects (the category-14 codemap still applies), more rigid for larger ones.
 16. **Quality grades** -- create `docs/QUALITY.md` scorecard grading each module/domain on coverage, type safety, complexity, and test health. Assess the current state, produce initial grades, and include guidance on how to maintain and update the scorecard over time.
 
 ### Environment & Infrastructure (categories 17-18)
@@ -99,11 +99,11 @@ For each approved category, perform the following. Read the referenced files bef
 
 ### Dependencies
 
-Detect the package manager and run the appropriate install command:
+Install only tools needed by the approved categories. Detect the package manager and persist the dependencies using its normal workflow:
 
-- **uv**: `uv add --dev ruff mypy vulture pytest pytest-xdist pytest-cov pytest-timeout pytest-asyncio pyupgrade flynt prek`; add `deptry` only when category 8 applies
+- **uv**: select the required tools from `uv add --dev ruff mypy vulture pytest pytest-xdist pytest-cov pytest-timeout pytest-asyncio pyupgrade flynt prek`; add `deptry` only when category 8 applies
 - **Runtime dependency:** when category 4 applies, run `uv add beartype` (or `poetry add beartype`); for pip, persist it in runtime requirements. Never put it only in a development group: production `__init__.py` imports it. Verify a package import in an environment installed without development dependencies.
-- **pip**: `pip install` equivalent
+- **pip**: add the selected tools to the project's development requirements file and install from it
 - **poetry**: `poetry add --group dev` equivalent
 
 ### Infrastructure setup
@@ -140,11 +140,11 @@ Detailed configs, scripts, and assets live in the skill's bundled resources. Rea
 
 ### Scripts
 
-Custom prek hook scripts in `scripts/`. All scripts accept filenames as arguments, report violations as `{file}:{line}: {message} -- {remediation}` (agent-readable), exit nonzero on failure, and support `# allow: {hook-name}` per-line exemptions.
+Custom prek hook scripts in `scripts/`. All scripts accept filenames as arguments, report violations as `{file}:{line}: {message} -- {remediation}` (agent-readable), exit nonzero on failure, and support `# allow: {hook-name}` exemptions. Place these on the relevant line; file-length exemptions belong in the first five lines of the file. Syntax and encoding errors are left to Ruff, which must run alongside these hooks.
 
-- **`scripts/check_exception_handling.py`** -- detects bare `except:`, swallowed exceptions, exception handlers with only `pass`
+- **`scripts/check_exception_handling.py`** -- detects bare `except:` and broad handlers without a direct raise or a call on a conventionally named logger
 - **`scripts/check_file_length.py`** -- enforces max 400 logical lines per file
-- **`scripts/check_timeless_comments.py`** -- detects temporal keywords in comments (legacy, new, old, TODO, FIXME, HACK, temporary)
+- **`scripts/check_timeless_comments.py`** -- detects temporal keywords in comments and docstrings (for example, legacy, new, old); explicit exemptions and TODO/FIXME comments are allowed
 - **`scripts/check_private_test_imports.py`** -- forbids tests from importing leading-underscore first-party symbols; auto-detects first-party packages, supports `--package` overrides and a `# allow: private-test-imports` carve-out
 
 ### Assets

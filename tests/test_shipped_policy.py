@@ -133,3 +133,19 @@ for value in ({}, {"user_id": 123}, {"user_id": ""}, None, []):
             check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_junk_drawer_rule_matches_whole_filenames(self) -> None:
+        rule = (SKILL / "assets/hookify.no-junk-drawers.md").read_text(encoding="utf-8")
+        pattern = re.search(r"^    pattern: (.+)$", rule, re.MULTILINE)
+        if pattern is None:
+            self.fail("Missing filename pattern")
+        for filename, expected in (
+            ("utils.py", True),
+            ("app/helpers.py", True),
+            (r"app\misc.py", True),
+            ("app/path_utils.py", False),
+            ("app/uncommon.py", False),
+            ("utils.py.backup", False),
+        ):
+            with self.subTest(filename=filename):
+                self.assertEqual(bool(re.search(pattern[1], filename)), expected)

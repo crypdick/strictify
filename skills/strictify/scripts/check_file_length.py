@@ -21,67 +21,60 @@ Exit codes:
 
 import argparse
 import ast
+import io
+import re
 import sys
+import tokenize
 from pathlib import Path
 
-
-class LogicalLineCounter(ast.NodeVisitor):
-    """Counts logical lines of code, ignoring docstrings and comments."""
-
-    def __init__(self) -> None:
-        self.docstring_lines: set[int] = set()
-
-    def visit_Expr(self, node: ast.Expr) -> None:
-        """Identify standalone string literals (pseudo-docstrings)."""
-        if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-            start = node.lineno
-            end = node.end_lineno if hasattr(node, "end_lineno") else start
-            if end is None:
-                end = start
-
-            for lineno in range(start, end + 1):
-                self.docstring_lines.add(lineno)
-
-        self.generic_visit(node)
+_ALLOW = re.compile(r"#\s*allow:\s*file-length(?![\w-])", re.IGNORECASE)
 
 
 def count_logical_lines(filepath: Path) -> int:
-    """Count logical lines (non-empty, non-comment, non-docstring) in a file."""
+    """Count physical lines containing code, excluding standalone strings.
+
+    Continuation lines count toward the budget. AST byte offsets let us remove
+    standalone strings while preserving code that shares their source lines.
+    """
     try:
         content = filepath.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        return 0
+        tree = ast.parse(content, filename=str(filepath))
+    except (SyntaxError, UnicodeDecodeError):
+        return 0  # Ruff owns syntax and encoding diagnostics.
 
-    try:
-        tree = ast.parse(content)
-    except SyntaxError:
-        return 0
-
-    # First pass: identify lines that are part of docstrings/string-literals
-    counter = LogicalLineCounter()
-    counter.visit(tree)
-
-    lines = content.splitlines()
-    logical_count = 0
-
-    for i, line in enumerate(lines, start=1):
-        stripped = line.strip()
-
-        # 1. Skip empty lines
-        if not stripped:
+    lines = content.encode("utf-8").splitlines(keepends=True)
+    for node in ast.walk(tree):
+        if not (
+            isinstance(node, ast.Expr)
+            and isinstance(node.value, ast.Constant)
+            and isinstance(node.value.value, str)
+        ):
             continue
+        end_line = node.end_lineno or node.lineno
+        for line_num in range(node.lineno, end_line + 1):
+            line = lines[line_num - 1]
+            start = node.col_offset if line_num == node.lineno else 0
+            end = node.end_col_offset if line_num == end_line else len(line.rstrip(b"\r\n"))
+            if end is None:
+                end = len(line.rstrip(b"\r\n"))
+            lines[line_num - 1] = line[:start] + b" " * (end - start) + line[end:]
 
-        # 2. Skip comments
-        if stripped.startswith("#"):
-            continue
-
-        # 3. Skip docstrings/string-literals (tracked by AST visitor)
-        if i in counter.docstring_lines:
-            continue
-
-        logical_count += 1
-
-    return logical_count
+    code = b"".join(lines).decode("utf-8")
+    ignored_tokens = {
+        tokenize.COMMENT,
+        tokenize.NL,
+        tokenize.NEWLINE,
+        tokenize.INDENT,
+        tokenize.DEDENT,
+        tokenize.ENDMARKER,
+    }
+    code_lines: set[int] = set()
+    for token in tokenize.generate_tokens(io.StringIO(code).readline):
+        if token.type not in ignored_tokens and token.string.strip() and token.string != ";":
+            code_lines.update(
+                line for line in range(token.start[0], token.end[0] + 1) if lines[line - 1].strip()
+            )
+    return len(code_lines)
 
 
 def check_file_length(filepath: Path, max_lines: int) -> tuple[int, str] | None:
@@ -96,7 +89,7 @@ def check_file_length(filepath: Path, max_lines: int) -> tuple[int, str] | None:
             (
                 f"File has {lloc} logical lines (limit {max_lines}) "
                 f"— split into smaller, focused modules "
-                f"(e.g., extract helpers, constants, or a sub-package)"
+                f"(extract cohesive behavior into a domain-focused module or composed collaborators)"
             ),
         )
     return None
@@ -113,23 +106,30 @@ def main(filenames: list[str] | None = None) -> int:
         help="Maximum allowed logical lines per file (default: 400)",
     )
     args = parser.parse_args(filenames)
+    if args.max_lines < 1:
+        parser.error("--max-lines must be a positive integer")
 
     exit_code = 0
-    total_violations = 0
 
     for filename in args.filenames:
         filepath = Path(filename)
 
-        if filepath.suffix != ".py":
+        if filepath.suffix != ".py" or not filepath.exists():
             continue
 
-        # Allow file-level ignore via comment in first 5 lines
+        # Tokenization prevents a marker inside a string from exempting the file.
         try:
-            with filepath.open(encoding="utf-8") as f:
-                first_lines = [next(f, "") for _ in range(5)]
-                if any("# allow: file-length" in line for line in first_lines):
-                    continue
-        except OSError:
+            with filepath.open(encoding="utf-8") as source:
+                exempt = False
+                for token in tokenize.generate_tokens(source.readline):
+                    if token.start[0] > 5:
+                        break
+                    if token.type == tokenize.COMMENT and _ALLOW.search(token.string):
+                        exempt = True
+                        break
+        except (UnicodeDecodeError, IndentationError, tokenize.TokenError):
+            continue  # Ruff owns malformed source diagnostics.
+        if exempt:
             continue
 
         result = check_file_length(filepath, args.max_lines)
@@ -137,21 +137,7 @@ def main(filenames: list[str] | None = None) -> int:
         if result is not None:
             _lloc, message = result
             exit_code = 1
-            total_violations += 1
             print(f"{filename}:1: {message}")
-
-    if exit_code != 0:
-        print("\n" + "=" * 70)
-        print(f"Found {total_violations} file(s) exceeding the line limit.")
-        print("")
-        print("  FIX the code (preferred):")
-        print("     - Extract cohesive behavior into a domain-focused module")
-        print("     - Move constants/config to a module owned by that domain")
-        print("     - Split responsibilities into composed collaborators")
-        print("")
-        print("  EXEMPT with '# allow: file-length' in the first 5 lines")
-        print("  ONLY when splitting is genuinely unfeasible.")
-        print("=" * 70)
 
     return exit_code
 

@@ -33,10 +33,13 @@ from __future__ import annotations
 
 import argparse
 import ast
+import io
+import re
 import sys
+import tokenize
 from pathlib import Path
 
-_ALLOW_MARKER = "private-test-imports"
+_ALLOW = re.compile(r"#\s*allow:\s*private-test-imports(?![\w-])", re.IGNORECASE)
 _SKIP_DIRS = frozenset(
     {
         "tests",
@@ -73,13 +76,13 @@ def detect_first_party_packages(root: Path) -> set[str]:
                 if (
                     child.stem.isidentifier()
                     and child.stem not in {"__init__", "conftest", "setup"}
-                    and not child.stem.startswith("test_")
+                    and not is_test_file(Path(child.name))
                 ):
                     packages.add(child.stem)
                 continue
             if child.name in _SKIP_DIRS:
                 continue
-            if (child / "__init__.py").is_file():
+            if child.name.isidentifier() and (child / "__init__.py").is_file():
                 packages.add(child.name)
     return packages
 
@@ -88,7 +91,11 @@ class PrivateImportVisitor(ast.NodeVisitor):
     """AST visitor flagging imports of private first-party symbols."""
 
     def __init__(self, file_content: str, first_party: set[str]) -> None:
-        self.lines = file_content.splitlines()
+        self.exempt_lines = {
+            token.start[0]
+            for token in tokenize.generate_tokens(io.StringIO(file_content).readline)
+            if token.type == tokenize.COMMENT and _ALLOW.search(token.string)
+        }
         self.first_party = first_party
         self.violations: list[tuple[int, str, str]] = []
 
@@ -106,17 +113,11 @@ class PrivateImportVisitor(ast.NodeVisitor):
         """
         return name.startswith("_") and not (name.startswith("__") and name.endswith("__"))
 
-    def _has_allow_comment(self, line_num: int) -> bool:
-        if 0 < line_num <= len(self.lines):
-            line_lower = self.lines[line_num - 1].lower()
-            return "# allow:" in line_lower and _ALLOW_MARKER in line_lower
-        return False
-
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         module = node.module or ""
-        if self._is_first_party(module):
+        if node.level == 0 and self._is_first_party(module):
             for alias in node.names:
-                if self._is_private(alias.name) and not self._has_allow_comment(alias.lineno):
+                if self._is_private(alias.name) and alias.lineno not in self.exempt_lines:
                     self.violations.append((alias.lineno, alias.name, module))
         self.generic_visit(node)
 
@@ -138,7 +139,11 @@ def find_private_imports(
 
 def is_test_file(file_path: Path) -> bool:
     """Only test files are subject to the convention."""
-    return "tests/" in str(file_path) or file_path.name.startswith("test_")
+    return (
+        bool({"test", "tests"}.intersection(file_path.parts[:-1]))
+        or file_path.name.startswith("test_")
+        or file_path.name.endswith("_test.py")
+    )
 
 
 def main(argv: list[str]) -> int:
@@ -157,36 +162,21 @@ def main(argv: list[str]) -> int:
         return 0
 
     exit_code = 0
-    total = 0
     for filename in args.filenames:
         file_path = Path(filename)
         if file_path.suffix != ".py" or not is_test_file(file_path) or not file_path.exists():
             continue
-        content = file_path.read_text(encoding="utf-8")
+        try:
+            content = file_path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue  # Ruff owns encoding diagnostics.
         for line_num, name, module in find_private_imports(content, first_party, str(file_path)):
             exit_code = 1
-            total += 1
             print(
                 f"{file_path}:{line_num}: test imports private '{name}' from first-party "
                 f"'{module}' — drive the public entry point that exercises it and assert on "
-                f"observable output; if nothing public reaches it, the private is dead code"
+                f"observable output (or annotate with # allow: private-test-imports)"
             )
-
-    if exit_code != 0:
-        print("\n" + "=" * 70)
-        print(f"Found {total} private-symbol import(s) in tests.")
-        print("")
-        print("  Tests must verify PUBLIC behaviour, not private implementation shape.")
-        print("")
-        print("  FIX: drive the public entry point that exercises this private and")
-        print("       assert on its observable result. If nothing public reaches the")
-        print("       private, it may be dead code — delete it (a 100% coverage gate")
-        print("       is the arbiter).")
-        print("")
-        print("  CARVE-OUT: a private whose only effect is an external-process side")
-        print("       channel with no public observable may keep a focused test —")
-        print(f"       annotate its import with '# allow: {_ALLOW_MARKER}'.")
-        print("=" * 70)
 
     return exit_code
 

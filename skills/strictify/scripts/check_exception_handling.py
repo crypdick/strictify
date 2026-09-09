@@ -1,189 +1,105 @@
 #!/usr/bin/env python3
-"""Prek hook to detect overly broad exception handling.
+"""Flag bare handlers and broad handlers without a direct raise or logging call.
 
-Philosophy: Do not use overly permissive exception handling that swallows
-errors. Prefer to fail fast and fix the root cause rather than masking the
-problem with a bare ``except:`` or a silent ``pass``.
-
-Detects:
-- Bare ``except:`` clauses
-- ``except Exception:`` without re-raising
-- Exception handlers whose body is only ``pass`` or ``continue``
-
-Allowed:
-- Lines annotated with ``# allow: exception-handling``
-
-Exit codes:
-  0 - All checks passed
-  1 - Violations found
+Recognizes Exception and BaseException, including builtins-qualified names and
+exception tuples. Logging uses receiver names logging, log, logger, or names
+ending in _logger; this is a syntax heuristic, not control-flow or type analysis.
+Narrow exception handlers may intentionally suppress an expected error.
+Exempt a handler with ``# allow: exception-handling`` on its ``except`` line.
 """
 
 import ast
+import io
+import re
 import sys
+import tokenize
 from pathlib import Path
 
+_ALLOW = re.compile(r"#\s*allow:\s*exception-handling(?![\w-])", re.IGNORECASE)
+_BROAD_EXCEPTIONS = {"Exception", "BaseException"}
+_LOG_METHODS = {"error", "warning", "exception", "critical", "debug", "info"}
 
-class ExceptionHandlerVisitor(ast.NodeVisitor):
-    """AST visitor to find problematic exception handlers."""
 
-    def __init__(self, filename: str, file_content: str) -> None:
-        self.filename = filename
-        self.file_content = file_content
-        self.lines = file_content.splitlines()
-        self.violations: list[tuple[int, str, str]] = []
+def is_broad_exception(node: ast.expr) -> bool:
+    """Recognize builtin catch-all exception types without resolving imports."""
+    if isinstance(node, ast.Tuple):
+        return any(is_broad_exception(element) for element in node.elts)
+    if isinstance(node, ast.Name):
+        return node.id in _BROAD_EXCEPTIONS
+    return (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "builtins"
+        and node.attr in _BROAD_EXCEPTIONS
+    )
 
-    def _has_allow_comment(self, start_line: int, end_line: int | None = None) -> bool:
-        """Check if any line in the range has ``# allow: exception-handling``."""
-        if end_line is None:
-            end_line = start_line
-        for line_num in range(start_line, end_line + 1):
-            if 0 < line_num <= len(self.lines):
-                line_lower = self.lines[line_num - 1].lower()
-                if "# allow:" in line_lower and "exception-handling" in line_lower:
-                    return True
+
+def is_logging_call(statement: ast.stmt) -> bool:
+    """Recognize direct calls on conventionally named logging receivers."""
+    if not isinstance(statement, ast.Expr) or not isinstance(statement.value, ast.Call):
         return False
-
-    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
-        """Check each exception handler for violations."""
-        line_num = node.lineno
-
-        # Skip if line has allow comment
-        if self._has_allow_comment(line_num):
-            self.generic_visit(node)
-            return
-
-        # Check for bare except:
-        if node.type is None:
-            self.violations.append(
-                (
-                    line_num,
-                    "bare_except",
-                    (
-                        "Bare 'except:' clause catches all exceptions including "
-                        "KeyboardInterrupt — catch a specific exception type instead "
-                        "(e.g., except ValueError as e:)"
-                    ),
-                )
-            )
-        # Check for except Exception:
-        elif isinstance(node.type, ast.Name) and node.type.id == "Exception":
-            # Check if it re-raises
-            has_raise = any(isinstance(stmt, ast.Raise) for stmt in node.body)
-
-            # Check if it only has pass or continue
-            is_only_pass = len(node.body) == 1 and isinstance(node.body[0], ast.Pass)
-            is_only_continue = len(node.body) == 1 and isinstance(node.body[0], ast.Continue)
-
-            if is_only_pass:
-                self.violations.append(
-                    (
-                        line_num,
-                        "exception_pass",
-                        (
-                            "Exception handler with only 'pass' swallows all errors "
-                            "— log the error and re-raise, or catch a narrower type"
-                        ),
-                    )
-                )
-            elif is_only_continue:
-                self.violations.append(
-                    (
-                        line_num,
-                        "exception_continue",
-                        (
-                            "Exception handler with only 'continue' swallows all errors "
-                            "— log the error and re-raise, or catch a narrower type"
-                        ),
-                    )
-                )
-            elif not has_raise:
-                # Only flag if there's no logging or other meaningful action
-                has_logging = any(
-                    isinstance(stmt, ast.Expr)
-                    and isinstance(stmt.value, ast.Call)
-                    and isinstance(stmt.value.func, ast.Attribute)
-                    and stmt.value.func.attr in ("error", "warning", "exception", "critical", "debug", "info")
-                    for stmt in node.body
-                )
-
-                if not has_logging:
-                    self.violations.append(
-                        (
-                            line_num,
-                            "broad_exception",
-                            (
-                                "Broad 'except Exception' without logging or re-raising "
-                                "— catch a specific exception or add logger.exception()"
-                            ),
-                        )
-                    )
-
-        self.generic_visit(node)
+    function = statement.value.func
+    if not isinstance(function, ast.Attribute) or function.attr not in _LOG_METHODS:
+        return False
+    receiver = function.value
+    if isinstance(receiver, ast.Name):
+        name = receiver.id
+    elif isinstance(receiver, ast.Attribute):
+        name = receiver.attr
+    else:
+        return False
+    return name in {"logging", "log", "logger"} or name.endswith("_logger")
 
 
 def check_exception_handling(file_path: Path) -> list[tuple[int, str, str]]:
-    """Check for problematic exception handling in a Python file.
-
-    Returns list of (line_number, violation_type, message) tuples.
-    """
+    """Return (line, violation type, remediation) for each problematic handler."""
     try:
         content = file_path.read_text(encoding="utf-8")
         tree = ast.parse(content, filename=str(file_path))
+    except (SyntaxError, UnicodeDecodeError):
+        return []  # Ruff owns syntax and encoding diagnostics.
 
-        visitor = ExceptionHandlerVisitor(str(file_path), content)
-        visitor.visit(tree)
-
-    except SyntaxError:
-        # Skip files with syntax errors (will be caught by other tools)
-        return []
-    except UnicodeDecodeError:
-        # Skip binary files
-        return []
-    else:
-        return visitor.violations
+    exempt_lines = {
+        token.start[0]
+        for token in tokenize.generate_tokens(io.StringIO(content).readline)
+        if token.type == tokenize.COMMENT and _ALLOW.search(token.string)
+    }
+    violations = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ExceptHandler) or node.lineno in exempt_lines:
+            continue
+        if node.type is None:
+            violations.append(
+                (
+                    node.lineno,
+                    "bare_except",
+                    "Bare 'except:' catches process-control exceptions — catch a specific exception type",
+                )
+            )
+        elif is_broad_exception(node.type) and not any(
+            isinstance(statement, ast.Raise) or is_logging_call(statement) for statement in node.body
+        ):
+            violations.append(
+                (
+                    node.lineno,
+                    "broad_exception",
+                    "Broad exception handler without logging or re-raising — catch a specific exception, re-raise, or call logger.exception()",
+                )
+            )
+    return sorted(violations)
 
 
 def main(filenames: list[str]) -> int:
-    """Run exception handling check on provided files."""
-    exit_code = 0
-    total_violations = 0
-
+    """Check existing Python files; return 1 when violations are found."""
+    failed = False
     for filename in filenames:
         file_path = Path(filename)
-
-        # Only check Python files
-        if file_path.suffix != ".py":
+        if file_path.suffix != ".py" or not file_path.exists():
             continue
-
-        # Skip if file doesn't exist
-        if not file_path.exists():
-            continue
-
-        violations = check_exception_handling(file_path)
-
-        if violations:
-            exit_code = 1
-            total_violations += len(violations)
-
-            for line_num, _violation_type, message in violations:
-                print(f"{file_path}:{line_num}: {message}")
-
-    if exit_code != 0:
-        print("\n" + "=" * 70)
-        print(f"Found {total_violations} exception handling violation(s).")
-        print("")
-        print("  FIX the code (preferred):")
-        print("     BAD:  except Exception: pass")
-        print("     GOOD: except (ValueError, KeyError) as e:")
-        print("               logger.error('Failed to process: %s', e)")
-        print("")
-        print("  EXEMPT with '# allow: exception-handling' ONLY when:")
-        print("     - The exception IS handled (collected, user notification)")
-        print("     - Fallback for unsupported operation (e.g., clipboard)")
-        print("     - Errors are appended to a list for batch reporting")
-        print("=" * 70)
-
-    return exit_code
+        for line_num, _kind, message in check_exception_handling(file_path):
+            print(f"{file_path}:{line_num}: {message}")
+            failed = True
+    return int(failed)
 
 
 if __name__ == "__main__":

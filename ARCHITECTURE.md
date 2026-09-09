@@ -64,8 +64,9 @@ The heart of the plugin.
   configuration; prek supplies pinned Ruff for these integration checks.
 - **Agent-readable output.** Every hook reports violations as
   `{file}:{line}: {message} -- {remediation}`, exits nonzero on failure, and honors
-  `# allow: {hook-name}` per-line exemptions. This contract is what lets both humans
-  and agents act on findings.
+  `# allow: {hook-name}` exemptions on the relevant line (or in the first five
+  lines for file length). Ruff owns syntax and encoding diagnostics. This contract
+  lets both humans and agents act on findings.
 - **Merge, never clobber.** The apply phase only adds or tightens target-repo
   settings, and the user can veto any category. A legacy YAML hook config is the
   one format-migration exception: preserve its behavior in native `prek.toml`,

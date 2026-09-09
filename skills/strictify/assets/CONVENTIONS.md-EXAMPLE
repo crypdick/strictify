@@ -132,8 +132,7 @@ concepts matters, after validating its value.
 
 ## Semantic types for domain concepts
 
-Give domain values a distinct type instead of a bare primitive. `NewType` is zero-cost
-at runtime and catches category errors at type-check time (passing an `OrgId` where a
+Give domain values a distinct type instead of a bare primitive. `NewType` preserves the underlying value at runtime and catches category errors at type-check time (passing an `OrgId` where a
 `UserId` is expected).
 
 ```python

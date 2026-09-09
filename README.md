@@ -101,13 +101,21 @@ Four scripts are adapted to your repo and installed in `scripts/prek_hooks/`:
 
 | Hook | What it catches |
 |------|----------------|
-| `check_exception_handling.py` | Bare `except:`, swallowed exceptions, `except Exception: pass` |
+| `check_exception_handling.py` | Bare `except:` and broad handlers without a direct raise or logging call |
 | `check_file_length.py` | Files over 400 logical lines |
 | `check_timeless_comments.py` | Temporal language in comments ("legacy", "old", "deprecated") |
 | `check_private_test_imports.py` | Tests importing private (`_foo`) first-party symbols instead of driving public behaviour |
 
 Ruff owns print/logging checks and misplaced future-import diagnostics. Print
 exemptions live in Ruff configuration or `# noqa: T201`.
+
+Exception logging detection recognizes `logging`, `log`, `logger`, and names ending
+in `_logger`; it does not resolve imports or prove control flow. Private-import
+checks cover absolute `from` imports in `test/`, `tests/`, `test_*.py`, and
+`*_test.py`; relative test-helper imports are excluded. File-length checks count
+physical lines containing code, including continuation lines, and accept a
+file-wide exemption comment in the first five lines. Ruff must run alongside
+these hooks to report syntax and encoding errors.
 
 All hooks output `{file}:{line}: {message} — {remediation}` so both humans and AI agents can act on violations.
 
@@ -120,6 +128,16 @@ Inspired by [AI Is Forcing Us to Write Good Code](https://bits.logic.inc/p/ai-is
 - **Self-reinforcing** — hookify rules capture new preferences as you express them
 - **Parse, don't validate** — coerce at the boundary, carry proof through types
 - **Agent legibility** — make code navigable by both humans and AI agents
+
+## Development
+
+Run the regression suite with its pinned Ruff dependency:
+
+```sh
+uv run --no-project --with ruff==0.15.20 python -m unittest discover -s tests
+```
+
+Run all repository checks with `uvx prek run --all-files`.
 
 ## License
 

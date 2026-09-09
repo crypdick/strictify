@@ -226,16 +226,11 @@ list then carves out pragmatic exceptions.
 
 **When to adjust `disable_error_code`:**
 
-- **Django:** Add `"no-any-return"`, `"attr-defined"`, `"override"` -- Django's ORM and
-  class-based views use dynamic attributes and method overrides heavily.
-- **FastAPI / Pydantic:** Add `"call-arg"` -- Pydantic model constructors often trigger
-  false positives with `model_validate` and similar patterns.
-- **CLI tools (click/typer):** The defaults below are usually sufficient. beartype
-  warnings for click decorators are handled separately.
-- **Data pipelines (pandas/numpy):** Add `"no-any-return"`, `"index"`, `"operator"` --
-  pandas return types are often `Any` and operator overloads are imprecise.
-- **Textual TUI:** Add `"attr-defined"`, `"override"`, `"union-attr"` -- Textual widgets
-  use dynamic attributes and complex inheritance.
+Run mypy first. For framework-related errors, check the framework's supported
+mypy plugin or type stubs before suppressing diagnostics. Scope necessary
+exceptions to the affected modules and error codes. Do not disable `attr-defined`,
+`override`, `call-arg`, or other correctness checks project-wide merely because a
+framework is installed.
 
 ```toml
 [tool.mypy]
@@ -251,8 +246,9 @@ disable_error_code = ["no-untyped-call", "no-untyped-def"]
 
 ### Test file overrides
 
-Tests should never block on type strictness. Fixtures, mocks, and parameterized tests
-routinely violate type constraints by design. This override applies to all test modules.
+If the project intentionally excludes tests from mypy, use an explicit override.
+Keep typed tests checked when practical; fixtures and mocks alone do not require
+disabling all diagnostics. Adapt module names to the actual test layout.
 
 ```toml
 [[tool.mypy.overrides]]
@@ -350,8 +346,8 @@ exclude_also = [
 - Add `omit = ["*/tests/*", "*/test_*.py", "*/__pycache__/*", "*/conftest.py"]` to
   `[tool.coverage.run]` to exclude test infrastructure from the coverage denominator.
 - For Django, add `"*/migrations/*"` and `"*/admin.py"` to `omit`.
-- For CLI tools, add `"*/cli.py"` or `"*/__main__.py"` to `exclude_also` patterns if
-  the CLI entry point is hard to test without subprocess calls.
+- Test CLI entry points through subprocess calls or a public callable. `exclude_also`
+  matches source text, not file paths; do not put filename globs there.
 
 ---
 
@@ -423,10 +419,9 @@ extend_exclude = ["scripts/prek_hooks"]
 Applies only to uv-managed repos. `exclude-newer` stops uv from resolving package
 versions published within the last 3 days.
 
-- This is a security measure against supply-chain breaches: malicious releases uploaded
-  to PyPI are usually detected and yanked within hours or days, so a short cooldown
-  window means compromised versions are removed before they can ever reach the
-  environment.
+- A cooldown gives maintainers time to investigate and withdraw problematic releases.
+  It does not guarantee that a release is safe or that a compromise will be detected
+  before the window expires.
 - Requires uv >= 0.9.17 (relative durations). The duration is resolved to a concrete
   timestamp when the lockfile is written and only moves forward when the lockfile is
   invalidated (e.g., `--upgrade`), so day-to-day runs do not churn `uv.lock`.
@@ -436,7 +431,6 @@ versions published within the last 3 days.
 
 ```toml
 [tool.uv]
-# Security measure: 3-day dependency cooldown so malicious releases are caught
-# and yanked from PyPI before they can reach this environment.
+# Delay adoption of fresh releases; this is not a guarantee of dependency safety.
 exclude-newer = "3 days"
 ```
