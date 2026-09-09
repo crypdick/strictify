@@ -23,6 +23,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill, AskUserQuestion
 Use the strictify skill to apply opinionated Python code quality enforcement to this repository.
 
 The skill drives a three-phase workflow:
+
 1. **Analyze** — use the context above plus additional exploration to understand the repo's current state
 2. **Propose** — present the user with a summary of 22 strictness categories, showing current state → proposed change for each
 3. **Apply** — for each approved category, merge configs, copy scripts, install hooks

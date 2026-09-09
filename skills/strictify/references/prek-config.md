@@ -1,4 +1,4 @@
-# Strict prek.toml Reference
+# Strict prek.toml reference
 
 Complete native `prek.toml` template. Strictify uses `prek` exclusively: do not install
 or invoke a fallback hook runner, and do not create a YAML hook configuration.
@@ -182,10 +182,10 @@ always_run = true
    the old file. Do not maintain parallel configurations.
 3. **Bootstrap the secrets baseline.** Run `uvx detect-secrets scan`, review every
    finding, and save the audited `.secrets.baseline` before enabling its hook.
-4. **Keep conditional blocks conditional.** Deptry needs trustworthy dependency
+4. **Check which optional tools apply.** Deptry needs trustworthy dependency
    metadata; schema validation must not overrule the actual tools; check-sdist belongs
    only in repos that publish a Python distribution.
-5. **Keep Vulture configuration singular.** The hook arguments override matching
+5. **Keep Vulture settings consistent.** The hook arguments override matching
    `pyproject.toml` values. Keep them synchronized or remove the hook arguments.
 6. **Update pins deliberately.** Use `uvx prek update`, inspect the resulting changes,
    and run the affected tools before accepting an update.

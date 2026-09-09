@@ -1,7 +1,7 @@
-# Strict pyproject.toml Reference
+# Strict pyproject.toml reference
 
-This document contains the canonical strict tool configurations for `pyproject.toml`.
-The agent should read each section's commentary and adapt settings to the target project's
+Use these tool configurations for `pyproject.toml`.
+Read each section's notes and adapt settings to the target project's
 framework, size, and conventions. Copy sections verbatim unless the commentary calls for
 adjustment.
 
@@ -11,16 +11,14 @@ adjustment.
 
 Ruff replaces flake8, isort, pyupgrade, and black in a single fast tool.
 
-- `line-length = 110` is a pragmatic default -- long enough for modern screens, short enough
-  to discourage run-on expressions. Adjust down to 88 for projects that follow strict
+- `line-length = 110` is the default. Adjust down to 88 for projects that follow strict
   black-compatible formatting.
 - The rule set is curated and versioned deliberately. Do not enable `ALL`, top-level
   preview mode, or unsafe fixes: review new rule families and fix safety before opting
   into them. Lint-scoped preview mode plus `explicit-preview-rules = true` permits the
   exact preview rules selected below without letting family prefixes silently acquire
   new preview rules during a Ruff upgrade; formatter preview remains disabled.
-- The `select` list covers the highest-signal anti-slop rule families for
-  agent-managed repos: builtin shadowing (`A`), explicit annotations (`ANN`),
+- The `select` list covers builtin shadowing (`A`), explicit annotations (`ANN`),
   unused arguments (`ARG`), async footguns (`ASYNC`), blind exceptions (`BLE`),
   bare-tuple comma bugs (`COM818`), naive datetimes (`DTZ`), commented-out code
   (`ERA`), executable-script hygiene (`EXE`), future annotations (`FA`),
@@ -46,12 +44,11 @@ Ruff replaces flake8, isort, pyupgrade, and black in a single fast tool.
   a narrow `# noqa: ANN401` only when a boundary is genuinely dynamic and cannot
   be typed honestly.
 - This supports the parse-don't-validate convention: coerce unstructured data
-  into constrained types at system boundaries so downstream code carries stronger
-  type evidence instead of repeatedly re-validating raw `Any` blobs. See
+  into constrained types at system boundaries so downstream code can use typed
+  values without repeatedly validating raw `Any` values. See
   <https://www.ricardodecal.com/opinions/parse-don-t-validate-in-python/>.
 - Do not enable broad `COM`, `Q`, or formatter-conflicting `ISC` settings while
-  using Ruff format. The selected comma and implicit-concat rules are bug-shaped,
-  not formatting policy.
+  using Ruff format. The selected comma and implicit-concat rules detect bugs.
 - `ignore = ["E501", "TRY003"]` defers line-length enforcement to the formatter
   and avoids exception-class ceremony for simple domain errors.
 
@@ -170,8 +167,7 @@ quote-style = "double"
 
 ### Complexity
 
-- `max-complexity = 15` is lenient enough for real-world code but catches genuinely
-  tangled functions. Lower to 10 for new greenfield projects. Raise to 20 only for
+- `max-complexity = 15` is the default. Lower to 10 for new projects. Raise to 20 only for
   data-pipeline code with unavoidable branching (and add a comment explaining why).
   This backs Ruff's `C901` rule.
 
@@ -215,12 +211,12 @@ a separate source-rewriting hook for them.
 ## [tool.mypy] -- Static Type Checking
 
 mypy with `strict = true` enables every strictness flag at once. The `disable_error_code`
-list then carves out pragmatic exceptions.
+list disables individual checks where needed.
 
 - Start with the minimal `disable_error_code` below. The agent should expand this list
   only when the target project has specific framework needs (see notes below).
-- `show_error_codes = true` and `pretty = true` are quality-of-life settings that help
-  developers fix issues faster.
+- `show_error_codes = true` and `pretty = true` display error codes and format diagnostics
+  for readability.
 - The `warn_*` flags are redundant with `strict = true` but are listed explicitly so that
   the intent is clear even if someone later sets `strict = false`.
 
@@ -274,7 +270,7 @@ ignore_errors = true
 - `-n auto` enables pytest-xdist parallel execution. Remove for projects with
   non-parallelizable tests (shared database state, file locks). If the project uses
   Django, use `--reuse-db` alongside `-n auto`.
-- `--failed-first` re-runs failures before passing tests, tightening the feedback loop.
+- `--failed-first` re-runs failures before passing tests so developers see recurring failures sooner.
 - `--cov={package_name}` activates pytest-cov and restricts measurement to production
   code. Reporting flags alone do not start coverage collection. Developers can still use
   `uv run pytest --no-cov` for a faster one-off run.
@@ -355,8 +351,8 @@ exclude_also = [
 
 Vulture finds unused Python code -- variables, functions, imports, classes, and attributes.
 
-- `min_confidence = 80` is a good default that catches genuine dead code without too many
-  false positives. Lower to 60 for aggressive cleanup; raise to 90 if the project uses
+- Start with `min_confidence = 80`. Lower to 60 to report more possible dead code;
+  raise to 90 if the project uses
   heavy metaprogramming (ORMs, plugin systems).
 - `exclude = [".venv/"]` prevents scanning vendored dependencies. Add framework-specific
   excludes as needed (e.g., `"migrations/"` for Django).

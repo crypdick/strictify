@@ -4,8 +4,8 @@ A Claude Code and Codex plugin that applies opinionated Python code quality
 enforcement to any repo.
 
 Run `/strictify` in Claude Code, or ask Codex to “strictify this repo,” from any
-Python project. It analyzes what's already in place, proposes strictness additions
-across 22 categories, and applies approved changes — including self-reinforcing
+Python project. It checks the existing setup, proposes changes
+across 22 categories, and applies the changes you approve. It also installs
 [hookify](https://github.com/anthropics/claude-code-plugins/tree/main/hookify) rules
 for Claude Code that capture your taste preferences as you work.
 
@@ -44,10 +44,10 @@ manifest is not required.
 
 ## What it does
 
-Strictify ships two kinds of enforcement, and most categories blend both:
+Strictify includes reusable configs and instructions for changes that depend on your repo:
 
-- **Pre-baked opinionated configs and scripts** — ruff/mypy/pytest/coverage settings, a native `prek.toml` template, and self-contained hook scripts that drop into any repo unchanged.
-- **Adaptable agent directives** — instructions that direct the agent to apply a *principle* to the specifics of your repo (its layers, its services, its worktree isolation needs) rather than copy a fixed artifact. When the right answer varies case by case, strictify hands the agent the essence and lets it build what fits — it does not hardcode stack-specific instructions (no baked-in OpenAPI/Postgres/Kysely recipes).
+- Ruff, mypy, pytest, and coverage settings; a native `prek.toml` template; and self-contained hook scripts.
+- Instructions for the agent to choose architectural layers, set up services, and isolate worktrees based on your repo's needs.
 
 `/strictify` runs a three-phase workflow:
 
@@ -81,16 +81,16 @@ selections cannot silently acquire new preview checks.
 
 ### Hookify rules
 
-Two rules are installed into your project's `.claude/` directory — both mechanical, low-false-positive matches:
+Two rules are installed into your project's `.claude/` directory. They match prompt keywords and filenames:
 
 - **taste-enforcer** — when you express a coding preference ("don't use X", "always prefer Y"), Claude codifies it as a prek hook, hookify rule, or pyproject.toml setting
 - **no-junk-drawers** — warns on `utils.py`, `helpers.py`, `misc.py` — name modules after what they do
 
 ### Design conventions doc
 
-Judgment-based design principles don't belong in a regex hook — deciding whether a `str` is "really" a domain concept, or whether some inheritance is the right call, takes reading the code. So strictify installs a `CONVENTIONS.md` (adapted from a template) and references it from your `CLAUDE.md`/`AGENTS.md` so agents read and apply it:
+Some design decisions require reading the code: whether a `str` represents a domain concept, for example, or whether inheritance fits. Strictify records these principles in a `CONVENTIONS.md` adapted to your repo and references it from `CLAUDE.md`/`AGENTS.md`:
 
-- **Composition over inheritance** — small parts + a combiner, and strategy injection, instead of subclass/config explosions
+- **Composition over inheritance** — combine focused components and inject strategies to avoid multiplying subclasses or configuration flags
 - **Parse, don't validate** — coerce to constrained types at the boundary; carry proof through types (with the Pydantic-validator caveat)
 - **Semantic types** — `NewType` for domain concepts like `user_id`, `amount`, `slug`
 - **Code/doc coupling** — leave `NOTE:` back-pointers where a value is also documented in prose
@@ -123,11 +123,11 @@ All hooks output `{file}:{line}: {message} — {remediation}` so both humans and
 
 Inspired by [AI Is Forcing Us to Write Good Code](https://bits.logic.inc/p/ai-is-forcing-us-to-write-good-code) and [Harness Engineering](https://openai.com/index/harness-engineering/):
 
-- **Enforce taste, not arbitrary strictness** — every rule exists because it improves code quality
-- **Bias strict, but check in** — aggressive defaults, user vetoes what doesn't fit
-- **Self-reinforcing** — hookify rules capture new preferences as you express them
-- **Parse, don't validate** — coerce at the boundary, carry proof through types
-- **Agent legibility** — make code navigable by both humans and AI agents
+- Choose rules for the problems they prevent.
+- Propose strict defaults and let the user veto what doesn't fit.
+- Capture coding preferences as enforceable rules during normal work.
+- Parse input at system boundaries and use types to preserve the resulting guarantees.
+- Organize code so people and agents can find what they need.
 
 ## Development
 

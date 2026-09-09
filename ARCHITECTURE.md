@@ -1,20 +1,16 @@
 # Architecture
 
-Strictify is a Claude Code and Codex plugin, not a runnable program. It is a bundle
-of *instructions and assets* that teach an agent how to add opinionated Python
-code-quality enforcement to some *other* repo. Both hosts read the same
-`.claude-plugin` marketplace metadata and `skills/strictify/SKILL.md`; duplicating
-those declarations in a second manifest would create version and description drift.
-There is no strictify runtime: the agent reads the skill, follows its three-phase
-workflow (analyze → propose → apply), and writes config and scripts into the target
-repo. Claude Code also consumes the bundled hookify rules. This document is a map
-of where things live, not how each rule works — the rules document themselves.
+Strictify is a Claude Code and Codex plugin containing instructions and assets for
+adding Python code-quality enforcement to a target repo. Both hosts read the same
+`.claude-plugin` marketplace metadata and `skills/strictify/SKILL.md`. The agent
+follows the skill's analyze → propose → apply workflow and writes config and scripts
+into the target repo. Claude Code also reads the bundled hookify rules.
 
 ## Codemap
 
 ### `.claude-plugin/`
 
-Cross-host plugin manifest. `plugin.json` declares name, version, and description;
+`plugin.json` declares name, version, and description;
 `marketplace.json` lets the repo be installed as a single-plugin marketplace in
 Claude Code or Codex. These two files must agree on name and version. No behavior
 lives here.
@@ -28,17 +24,14 @@ The command is a thin entry point; all logic lives in the skill.
 
 ### `skills/strictify/`
 
-The heart of the plugin.
-
 - **`SKILL.md`** — the workflow. Defines the 22 enforcement categories, the
   analyze/propose/apply phases, conflict handling, and pointers to every resource
-  below. This is the one file to read to understand what strictify *does*. Category
-  numbering here is load-bearing: `SKILL.md`, `README.md`, and the plugin manifests
-  all quote "22 categories" and must stay in sync.
-- **`references/`** — the config payloads the agent merges into a target repo:
+  below. Start here to understand what strictify does. `SKILL.md`, `README.md`, and
+  the plugin manifests all quote "22 categories" and must stay in sync.
+- **`references/`** — the configs the agent merges into a target repo:
   `pyproject-strict.md` (ruff/mypy/pytest/coverage/vulture/deptry), `prek-config.md`
-  (the native `prek.toml` template), and `beartype-setup.md`. Prose-wrapped so
-  the agent reads intent before copying.
+  (the native `prek.toml` template), and `beartype-setup.md`. Each explains when
+  and how to adapt its settings.
 - **`scripts/`** — custom prek hook scripts copied into the target repo's
   `scripts/prek_hooks/`: `check_exception_handling.py`,
   `check_file_length.py`, `check_timeless_comments.py`, and
@@ -48,8 +41,8 @@ The heart of the plugin.
   only mechanical, low-false-positive matches ship as hooks. `CONVENTIONS.md-EXAMPLE`
   is copied to the repo root as `CONVENTIONS.md`, adapted, and referenced from
   `CLAUDE.md`/`AGENTS.md` — it holds the judgment-based principles (composition over
-  inheritance, parse-don't-validate, semantic types, code/doc coupling) that were too
-  nuanced to enforce with a regex hook.
+  inheritance, parse-don't-validate, semantic types, code/doc coupling) that require
+  reading the code to apply.
 
 ## Invariants
 
@@ -78,8 +71,8 @@ The heart of the plugin.
 ## Non-goals
 
 - Strictify does not enforce most categories on *this* repo — there is no Python
-  package here and no `pyproject.toml`; its native `prek.toml` only dogfoods the
-  repo-agnostic checks and validates the shipped hook payloads.
+  package here and no `pyproject.toml`; its native `prek.toml` runs the
+  repo-agnostic checks and validates the bundled hook scripts.
 - It targets Python repos only; the analysis and configs assume a Python toolchain.
 
 Revisit this file a couple of times a year, or whenever a category is added, split,

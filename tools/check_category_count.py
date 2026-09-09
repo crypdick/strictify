@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guard the load-bearing "N categories" constant against drift.
+"""Check that documented category counts match the skill's numbered list.
 
 The number of strictify categories is quoted in four places -- the skill, the
 README, and both plugin manifests -- and ARCHITECTURE.md calls it out as a

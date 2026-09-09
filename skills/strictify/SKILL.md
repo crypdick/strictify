@@ -7,19 +7,19 @@ description: This skill should be used when the user asks to "strictify a repo",
 
 ## Overview
 
-This skill enforces taste programmatically across 22 categories of Python code quality. It analyzes an existing repository (or bootstraps a new one), proposes strict-but-pragmatic defaults across static analysis, type safety, testing, architecture, and ongoing enforcement, then applies approved changes. Every rule exists because it improves code quality, not because a linter supports it.
+This skill adds Python code-quality enforcement across 22 categories. It analyzes an existing repository or sets up a new one, proposes rules that fit the project, then applies approved changes.
 
-The approach is inspired by the "AI Is Forcing Us to Write Good Code" thesis and OpenAI's "Harness Engineering" insight: AI agents amplify whatever quality level a codebase already has. The only guardrails are the ones that get set and enforced. The tooling, abstractions, and feedback loops that keep a codebase coherent are the primary leverage point. Agent legibility -- making code navigable by both humans and AI agents -- is a first-class goal alongside human readability.
+Inspired by "AI Is Forcing Us to Write Good Code" and OpenAI's "Harness Engineering," strictify uses automated checks and documented conventions to help agents follow the project's standards. Code and documentation should be easy for both people and agents to navigate.
 
 ## Philosophy
 
-- **Enforce taste, not arbitrary strictness** -- every rule exists because it improves code quality
-- **Fit before force** -- these categories are a menu of good patterns, not a checklist to apply wholesale. Not every pattern suits every repo, so first read the target and judge whether each directive even makes sense for its size, stack, domain, and maturity; skip or soften what does not earn its place (no architectural-layer lint rules for a 200-line script, no third-party-call caching for an offline library, no per-worktree isolation for a repo with no shared services). Then bias strict on what remains.
-- **Bias for strict, but check in** -- propose aggressive defaults, let the user veto
-- **Self-reinforcing** -- hookify rules capture new taste preferences during normal work
-- **Parse, don't validate** -- coerce at the boundary, carry proof through types
-- **Agent legibility** -- make code navigable by both humans and AI agents
-- **Detect and fill gaps** -- works on both existing and new projects, merging strictness into whatever is already there
+- Choose rules for the problems they prevent.
+- Judge each category against the repo's size, stack, domain, and maturity. Skip or adapt what doesn't fit: a 200-line script doesn't need architectural-layer lint rules, an offline library doesn't need third-party-call caching, and a repo with no shared services doesn't need per-worktree isolation.
+- Propose strict defaults for the categories that fit, and let the user veto them.
+- Capture coding preferences as hookify rules during normal work.
+- Parse input at system boundaries and use types to preserve the resulting guarantees.
+- Organize code so people and agents can find what they need.
+- Add missing checks to existing projects and new ones, merging with the current configuration.
 
 ## Phase 1: Analyze
 
@@ -39,11 +39,11 @@ Scan the target repo to understand its current state. Check all of the following
 
 ## Phase 2: Propose
 
-First, use the Phase 1 analysis to filter to the categories that actually fit this repo (see *Fit before force*), setting aside the rest with a brief reason. Then present the remaining findings grouped by the 6 category groups below. For each category, show: **current state -> proposed change**. Ask the user to veto any categories they do not want. Within the relevant set, default is to apply everything -- the user opts OUT, not in.
+Use the Phase 1 analysis to select categories that fit the repo, and briefly explain any you skip. Present the findings in the 6 groups below, showing **current state -> proposed change** for each category. Ask the user to veto any they do not want. Default to applying all relevant categories unless the user vetoes them.
 
 ### Static Analysis & Type Safety (categories 1-6)
 
-1. **Prek hook framework** -- install `prek` if missing and use native `prek.toml`; this is a hard cut, with no fallback runner. Migrate a legacy YAML hook config instead of leaving both systems in place. Read `references/prek-config.md` for the full template.
+1. **Prek hook framework** -- install `prek` if missing and use native `prek.toml` exclusively. Migrate any legacy YAML hook config and remove it once the replacement is verified. Read `references/prek-config.md` for the full template.
 2. **Ruff** -- curated anti-slop lint rules (core `E`/`W`/`F`/`I`, `B`, `UP`, `C4`, `SIM`, `RUF`, complexity `C90`, selected annotation/docstring checks, plus high-signal families for async, exceptions, logging, performance, security, pytest, pathlib, suppressions, private access, debugger/print bans, executable scripts, and import/package boundaries) and format config. Do not enable `ALL`, top-level preview mode, or unsafe fixes. Exact preview lint rules may be enabled only with lint-scoped preview mode and `explicit-preview-rules = true`. Read `references/pyproject-strict.md` for exact settings. Ruff owns cyclomatic-complexity enforcement through `C901`; do not add a second complexity tool.
 3. **mypy** -- `strict = true` with pragmatic exceptions for the project's frameworks. Read `references/pyproject-strict.md` for strict mypy config and framework overrides.
 4. **Beartype** -- add dependency, insert `beartype_this_package()` in package `__init__.py`. Read `references/beartype-setup.md` for integration patterns and common issues.
@@ -64,15 +64,15 @@ First, use the Phase 1 analysis to filter to the categories that actually fit th
 
 ### Architecture & Organization (categories 13-16)
 
-13. **Filesystem discipline** -- file length limits (400 lines). Hookify rule warning on `utils.py`/`helpers.py`/`misc.py` creation. The problem is not shared code -- it is anonymous shared code. If a shared utility is needed, name it after what it does.
-14. **Architecture codemap** -- create `docs/ARCHITECTURE.md`: a short bird's-eye map that tells a newcomer (human or agent) *where* things live, not *how* they work. Include a one-paragraph statement of the problem the codebase solves, a codemap of the coarse-grained modules/packages and how they relate, and the load-bearing architectural invariants -- including things deliberately *absent* (e.g. "the domain layer never imports Django"). Name important files, modules, and types explicitly so they are greppable. Keep it short and do not link to specific lines (links rot); it is a mental model, not an index. This is the primary agent-legibility artifact -- valuable for every project regardless of size. Revisit it a couple of times a year rather than syncing it to every change.
+13. **Filesystem discipline** -- limit files to 400 lines and add a hookify rule warning on `utils.py`/`helpers.py`/`misc.py` creation. Name shared utilities after what they do.
+14. **Architecture codemap** -- create `docs/ARCHITECTURE.md` to help newcomers find their way around the code. Include a paragraph explaining the problem it solves, a map of the main modules and packages and their relationships, and the architectural invariants (e.g. "the domain layer never imports Django"). Name important files, modules, and types so readers can search for them. Keep it short and avoid links to specific lines, which go stale. Every project should have this map, regardless of size. Revisit it a couple of times a year rather than on every edit.
 15. **Architectural layer enforcement** -- analyze the project's domain structure and propose dependency-direction rules. Describe each arrow explicitly as “imports”: for example, views -> services -> models when that matches the project. Do not confuse execution order (such as extract, transform, load) with allowed import dependencies. Figure out the appropriate layers for the target project, create custom lint rules enforcing valid dependency edges, and record the layers and their invariants in the `docs/ARCHITECTURE.md` codemap (category 14). Scale to project size: lightweight or no lint rules for small projects (the category-14 codemap still applies), more rigid for larger ones.
 16. **Quality grades** -- create `docs/QUALITY.md` scorecard grading each module/domain on coverage, type safety, complexity, and test health. Assess the current state, produce initial grades, and include guidance on how to maintain and update the scorecard over time.
 
 ### Environment & Infrastructure (categories 17-18)
 
-17. **Ephemeral environment** -- the goal is a *single command* that stands up a fresh, ready-to-work dev environment -- create a git worktree, copy local-only config (`.env`, credentials, editor settings), install dependencies, hand off to the agent -- fast enough (seconds, not minutes) to make concurrent agents in separate worktrees practical. Build the version that fits the target: for a uv project with no services, a thin `new-feature <name>` script wrapping `git worktree add` + `uv sync` + `.env` copy; for a heavier stack, whatever else it needs to boot. Adapt the essence (one command, ephemeral, automated) to the repo rather than shipping a fixed script.
-18. **Per-worktree isolation** -- worktrees must not collide when several run at once. **The rule: any state at a fixed shared location must be keyed per-worktree** -- ports, database/schema names, caches on hardcoded paths (`/tmp/myapp-cache`, `~/.cache/myapp`), and shared service instances (redis db numbers, queue names). Derive each from the worktree (an offset or hash of its name) via environment variables, or concurrent worktrees clobber each other. The exception is content-addressed global caches (`~/.cache/uv`, pip wheels): keyed by content hash, so sharing them is safe -- leave them alone. A project with no shared state may just need `uv run` to work from any worktree; a complex one should template the isolating env vars into the category-17 setup command so isolation is automatic, not manual. With containers, isolation may mean per-worktree Docker compose project names or volumes.
+17. **Ephemeral environment** -- create a single command that prepares a fresh development environment: create a git worktree, copy local-only config (`.env`, credentials, editor settings), install dependencies, and hand off to the agent. Aim for setup in seconds so agents can work concurrently in separate worktrees. For a uv project with no services, a `new-feature <name>` script can wrap `git worktree add`, `uv sync`, and an `.env` copy. Add service startup or other steps as the repo requires.
+18. **Per-worktree isolation** -- give each worktree its own ports, database/schema names, caches on hardcoded paths (`/tmp/myapp-cache`, `~/.cache/myapp`), and shared service identifiers (redis db numbers, queue names). Derive these from the worktree name using an offset or hash, and pass them through environment variables to prevent collisions. Keep content-addressed global caches (`~/.cache/uv`, pip wheels) shared; their content hashes already separate entries. A project with no shared state may only need `uv run` to work from any worktree. Otherwise, add the isolation variables to the category-17 setup command. Containers may need per-worktree Docker compose project names or volumes.
 
 ### Ongoing Enforcement (categories 19-22)
 
@@ -94,8 +94,8 @@ For each approved category, perform the following. Read the referenced files bef
 
 - **Copy and adapt scripts** -- read each script from `scripts/` (check_exception_handling.py, check_file_length.py, check_timeless_comments.py, check_private_test_imports.py). Adapt paths and package names to the target repo. Write to `scripts/prek_hooks/` in the target repo. `check_private_test_imports.py` auto-detects first-party packages from the target's layout, and flat Python modules. For namespace packages or other layouts, pass explicit `--package` names identified during analysis.
 - **Beartype integration** -- read `references/beartype-setup.md`. Modify the package `__init__.py` to insert `beartype_this_package()`.
-- **Hookify rules** -- copy from `assets/` (taste-enforcer, no-junk-drawers) to the target repo's `.claude/` directory. Only these two are shipped as hooks: a prompt-keyword trigger and a filename match, both mechanical and low-false-positive. The judgment-based design principles that used to be hookify rules now live in the `CONVENTIONS.md` design doc (see *Infrastructure setup* below).
-- **Design conventions doc** -- copy `assets/CONVENTIONS.md-EXAMPLE` to the target as `CONVENTIONS.md`, then adapt it: trim principles that do not fit, sharpen examples to use the repo's real types, add repo-specific conventions. It seeds judgment-based principles too nuanced for a regex hook -- composition over inheritance, parse-don't-validate, semantic types, and code/doc coupling. Append a pointer line to the repo's `CLAUDE.md`/`AGENTS.md` (e.g. "See `CONVENTIONS.md` for design principles") so agents load it. This is an agent-legibility artifact alongside `docs/ARCHITECTURE.md` and `docs/QUALITY.md`.
+- **Hookify rules** -- copy from `assets/` (taste-enforcer, no-junk-drawers) to the target repo's `.claude/` directory. These match prompt keywords and filenames. Design principles that require reading the code belong in `CONVENTIONS.md`.
+- **Design conventions doc** -- copy `assets/CONVENTIONS.md-EXAMPLE` to the target as `CONVENTIONS.md`. Remove principles that do not fit, use the repo's types in examples, and add repo-specific conventions. The template covers composition over inheritance, parse-don't-validate, semantic types, and code/doc coupling. Append a pointer to `CLAUDE.md`/`AGENTS.md` (e.g. "See `CONVENTIONS.md` for design principles") so agents load it alongside `docs/ARCHITECTURE.md` and `docs/QUALITY.md`.
 
 ### Dependencies
 
@@ -109,7 +109,7 @@ Install only tools needed by the approved categories. Detect the package manager
 ### Infrastructure setup
 
 - Run `prek install` to activate hooks.
-- **Architecture codemap**: create `docs/ARCHITECTURE.md` -- a short bird's-eye problem statement, a codemap of the coarse-grained modules and how they relate, and the load-bearing invariants (including deliberate absences). Name entities so they are greppable; do not link to specific lines.
+- **Architecture codemap**: create `docs/ARCHITECTURE.md` with a short problem statement, a map of the main modules and their relationships, and the architectural invariants. Name files, modules, and types so readers can search for them; avoid links to specific lines.
 - **Architectural layers**: if the project warrants it, add dependency-direction lint rules and record the layers in the codemap.
 - **Quality scorecard**: create `docs/QUALITY.md` with initial grades per module.
 - **Doc gardening**: set up stale-docs detection appropriate to project maturity; put `docs/ARCHITECTURE.md` on a "revisit a couple times a year" cadence rather than gating every change on it.
@@ -117,7 +117,7 @@ Install only tools needed by the approved categories. Detect the package manager
 
 ## Conflict Handling
 
-When existing configuration already exists:
+When the repo already has configuration:
 
 - **Merge-up** -- read existing config, add missing strict settings, tighten existing ones
 - **Never remove** user settings -- only add or tighten. The sole format-migration

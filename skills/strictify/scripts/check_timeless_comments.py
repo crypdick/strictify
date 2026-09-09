@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """Prek hook to enforce timeless comments.
 
-Philosophy: Comments should describe *what* code does and *why*, not narrate
-repository history. Temporal language that centers chronology instead of
-current behavior makes comments age poorly and obscures the code's present
-intent.
+Comments should explain what code does and why. Describing code as "new" or
+"old" becomes misleading as the repository changes.
 
 Detects:
 - Temporal keywords in inline comments and docstrings (see ``TEMPORAL_KEYWORDS``)

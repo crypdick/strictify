@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Prek hook to enforce file length limits.
 
-Philosophy: Large files are harder to understand, test, and review.  Keeping
-files under a logical-line budget encourages modularity and separation of
-concerns.
+Limit file length to keep modules small enough to understand, test, and review.
 
 Logical lines of code (LLOC) are lines that are not empty, not comments, and
 not part of docstrings or standalone string literals.

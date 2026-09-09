@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """Prek hook to forbid tests from importing private first-party symbols.
 
-Philosophy: tests should verify *public behaviour*, not private implementation
-shape. Importing a leading-underscore name from a first-party package into a
-test couples that test to internal structure: it breaks on harmless refactors
-and, worse, keeps dead private code alive past the point the public surface
-stopped needing it. Drive the public entry point instead and assert on its
-observable result.
+Importing a leading-underscore name from a first-party package ties a test to
+internal code. Such tests can break on harmless refactors or keep testing private
+code that the public API no longer uses. Call the public entry point and assert
+on its observable result.
 
 Detects:
 - ``from <first_party>... import _private`` in test files, including the

@@ -1,9 +1,8 @@
 # Ruff config for this repo's own Python — the four stdlib-only prek hook
 # scripts under skills/strictify/scripts/ and their regression tests.
 #
-# Mirrors the strict config strictify ships in
-# skills/strictify/references/pyproject-strict.md, so the plugin's own payloads
-# pass the exact bar the plugin enforces on target repos.
+# Uses the same rules as skills/strictify/references/pyproject-strict.md to check
+# the bundled scripts against the policy strictify installs in target repos.
 
 line-length = 110
 

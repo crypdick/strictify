@@ -10,8 +10,8 @@
     {
       "name": "strictify",
       "source": "./",
-      "description": "Apply opinionated Python code quality enforcement to any repo. Analyzes existing config, proposes strictness additions across 22 categories, and installs self-reinforcing hookify rules.",
-      "version": "0.6.4"
+      "description": "Add Python code quality checks to a repo. Reviews existing config, proposes changes across 22 categories, and installs hookify rules to capture coding preferences.",
+      "version": "0.6.5"
     }
   ]
 }

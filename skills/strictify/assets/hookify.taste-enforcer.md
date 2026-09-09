@@ -6,9 +6,9 @@ pattern: don.?t use|always prefer|avoid|never do|instead of|I hate when|stop usi
 action: warn
 ---
 
-Keyword hit. The user might have expressed a coding preference or taste.
+The prompt matched a keyword that may indicate a coding preference.
 
-Reminder: always do the following when the user expresses a code preference that should be enforced going forward. Determine whether it can be codified as:
+When the user expresses a coding preference that should apply to future work, determine whether it can be enforced with:
 
 1. **A prek hook script** — if it's about code patterns that can be detected statically (e.g., "don't use bare except", "avoid print statements"). Create or update a script in `scripts/prek_hooks/` and wire it into `prek.toml`.
 
@@ -16,6 +16,6 @@ Reminder: always do the following when the user expresses a code preference that
 
 3. **A pyproject.toml setting** — if it maps to an existing tool's configuration (e.g., "ban star imports" → ruff rule).
 
-If the preference is already enforced by an existing hook or rule but the user still had to say something about it, that means the existing enforcement failed to do its job. Identify why it didn't catch the issue (pattern too narrow? wrong event type? missing edge case?) and propose a fix to strengthen the existing hook or rule.
+If an existing hook or rule missed the issue, check its pattern, event type, and edge cases, then propose a fix.
 
-Also: if the user previously expressed a taste in this conversation that this hook missed as a false negative, write a hook for that too.
+Check earlier messages in this conversation for preferences this hook missed, and write hooks for those too.

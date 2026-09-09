@@ -1,29 +1,23 @@
 # Design Conventions
 
-> **This is a strictify template.** Copy it to your repo as `CONVENTIONS.md`, then
-> **adapt it**: trim principles that don't fit this codebase, sharpen the examples to
-> use real types from this repo, and add repo-specific conventions of your own. Then
-> add a pointer line to your `CLAUDE.md` / `AGENTS.md` (e.g. *"See `CONVENTIONS.md`
-> for design principles"*) so agents actually load it.
+> Copy this strictify template to your repo as `CONVENTIONS.md`. Remove principles
+> that don't fit, use the repo's types in examples, and add its conventions. Add
+> a pointer to `CLAUDE.md` / `AGENTS.md` (e.g. "See `CONVENTIONS.md` for design
+> principles") so agents load it.
 
-These are judgment-based design principles, not mechanically-checkable rules. A linter
-or hookify regex can't decide whether a given `str` is "really" a domain concept or
-whether some inheritance is genuinely the right call — that takes reading the code and
-applying taste. This doc is where those principles live so both humans and coding
-agents apply them consistently. Enforce them with judgment; the caveats matter.
+These principles require reading the code to apply. Use them to decide when a `str`
+needs a domain type, when inheritance fits, and how to keep code and documentation
+consistent. Check the caveats before applying a principle.
 
 ---
 
 ## Composition over inheritance
 
-Build big things out of small, focused parts plus a combiner, rather than a class
-hierarchy that has to know about every variant. Adding a feature becomes writing a new
-part instead of editing the core, illegal combinations become unrepresentable, and each
-part is testable on its own.
+Combine focused components so each can be tested independently and new features
+can be added without editing the core. Components can also avoid invalid combinations
+of configuration flags, as in the report example below.
 
-**Two smells this replaces:**
-
-*Subclass explosion* — variant chains and mixins that couple classes across files:
+Subclass chains and mixins can couple classes across files:
 
 ```python
 # AVOID
@@ -31,9 +25,9 @@ class SalesReportWithChartAndFooter(SalesReportWithChart): ...
 class Report(TitleMixin, ChartMixin, FooterMixin): ...  # MRO surprises
 ```
 
-*Config explosion* — a god class of boolean feature-flags, which makes illegal states
-representable (`Report(show_footer=False, footer_text="Confidential")` type-checks and
-silently drops the text):
+A class with many boolean feature flags can accept contradictory settings.
+For example, `Report(show_footer=False, footer_text="Confidential")` type-checks
+but silently drops the text:
 
 ```python
 # AVOID
@@ -42,7 +36,7 @@ class Report:
                  footer_text: str | None = None, ...): ...
 ```
 
-**Prefer small parts + a combiner:**
+Instead, give the report a list of sections to render:
 
 ```python
 from typing import Protocol
@@ -63,11 +57,11 @@ class Report:                       # a combiner, not a god class
 Report([Title("Sales"), Table(rows), Footer("Generated automatically")])
 ```
 
-`Report` no longer knows a title from a footer — it only joins renderables. `mypy`
-catches a malformed part (one missing `render`) at the boundary. The structure of the
-code mirrors the structure of the output, which makes this a strong pattern for UIs.
+`Report` joins rendered sections without needing to know their types. `mypy`
+catches a section missing `render`. This structure also suits UIs, where components
+correspond to parts of the output.
 
-**For swappable *behavior*, inject a strategy instead of subclassing:**
+For behavior that needs to vary, inject a strategy:
 
 ```python
 # AVOID: class EmailNotifier(Notifier), class SmsNotifier(Notifier), ...
@@ -83,10 +77,9 @@ class Notifier:
 Notifier(EmailTransport()).send("hi")
 ```
 
-**Caveat:** inheritance is sometimes right — framework base classes, `Enum`,
-`Exception`, and genuine is-a relationships with no combinatorial variants. Reach for
-composition when you feel a hierarchy starting to multiply or a constructor sprouting
-flags.
+Inheritance still fits framework base classes, `Enum`, `Exception`, and is-a
+relationships without combinatorial variants. Consider composition when adding
+variants requires more subclasses or constructor flags.
 
 ---
 
@@ -144,10 +137,9 @@ Amount = NewType("Amount", int)
 def get_user(user_id: UserId) -> User: ...   # clear intent, mis-use is a type error
 ```
 
-Apply this to identifiers, amounts, slugs, tokens, emails, URLs, paths — anything with
-domain meaning that would silently accept the wrong `str`/`int`. **Caveat:** a genuinely
-raw primitive with no domain meaning (a loop counter, a generic buffer size) doesn't
-need wrapping. This is about intent, not blanket wrapping of every scalar.
+Use distinct types for identifiers, amounts, slugs, tokens, emails, URLs, and paths
+when accepting the wrong `str` or `int` would be a domain error. Leave primitives
+without domain meaning, such as loop counters and generic buffer sizes, unwrapped.
 
 ---
 
