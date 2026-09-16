@@ -67,7 +67,7 @@ Use the Phase 1 analysis to select categories that fit the repo, and briefly exp
 
 13. **Filesystem discipline** -- limit files to 400 lines and add a hookify rule warning on `utils.py`/`helpers.py`/`misc.py` creation. Name shared utilities after what they do.
 14. **Architecture codemap** -- maintain the repo's existing architecture map, or create `docs/ARCHITECTURE.md` if none exists. Include the problem it solves, the main packages and their relationships, and architectural invariants (e.g. "the domain layer never imports Django"). Name important files, modules, and types so readers can search for them. Link to executable policy rather than duplicating its allowlists. Every project should have this short map, regardless of size. Revisit the overview a couple of times a year; update policy links and changed invariants alongside code.
-15. **Architecture boundary enforcement** -- read `references/architecture-boundaries.md` when this category fits. Derive package ownership, exact public surfaces, and allowed dependency directions from the target repo. Enforce visibility and direction independently, with named composition roots and exact, shrinking exceptions for existing debt. Prefer existing tools; add custom checks only for uncovered requirements. Include policy validation and, where shared root modules are a problem, direct-importer budgets. Use lightweight or no boundary checks for small projects; do not impose one role hierarchy or rewrite architecture merely to install enforcement.
+15. **Architecture boundary enforcement** -- read `references/architecture-boundaries.md` when this category fits. Derive package ownership, exact public surfaces, and allowed dependency directions from the target repo. Enforce visibility and direction independently, with named composition roots and exact, shrinking exceptions for existing debt. Prefer existing tools; otherwise use the bundled `scripts/architecture/` toolkit and `assets/architecture.toml` following `references/architecture-toolkit.md`. Include policy validation and, where shared root modules are a problem, direct-importer budgets. Use lightweight or no boundary checks for small projects; do not impose one role hierarchy or rewrite architecture merely to install enforcement.
 16. **Quality grades** -- create `docs/QUALITY.md` scorecard grading each module/domain on coverage, type safety, complexity, and test health. Assess the current state, produce initial grades, and include guidance on how to maintain and update the scorecard over time.
 
 ### Environment & Infrastructure (categories 17-18)
@@ -139,19 +139,23 @@ Detailed configs, scripts, and assets live in the skill's bundled resources. Rea
 - **`references/prek-config.md`** -- complete native `prek.toml` template with built-in, remote, conditional integrity, and local hook definitions
 - **`references/beartype-setup.md`** -- beartype integration guide: `beartype_this_package()` snippet, `BeartypeConf` options, common issues, and install commands per package manager
 - **`references/architecture-boundaries.md`** -- category 15: ownership, public APIs, dependency direction, composition roots, baseline ratcheting, and verification requirements for the target's selected checker
+- **`references/architecture-toolkit.md`** -- bundled checker's installation, CLI, strict schema, starter policy, baseline format, limitations, and Strictify's own worked example
 
 ### Scripts
 
-Custom prek hook scripts in `scripts/`. All scripts accept filenames as arguments, report violations as `{file}:{line}: {message} -- {remediation}` (agent-readable), exit nonzero on failure, and support `# allow: {hook-name}` exemptions. Place these on the relevant line; file-length exemptions belong in the first five lines of the file. Syntax and encoding errors are left to Ruff, which must run alongside these hooks.
+Single-file prek hooks in `scripts/` accept filenames as arguments, report violations as `{file}:{line}: {message} -- {remediation}` (agent-readable), exit nonzero on failure, and support `# allow: {hook-name}` exemptions. Place these on the relevant line; file-length exemptions belong in the first five lines of the file. Syntax and encoding errors are left to Ruff, which must run alongside these hooks. The architecture toolkit is different: copy its whole package, run its public `api` module over the configured tree, and use reviewed policy/baseline exceptions, never line suppressions.
 
 - **`scripts/check_exception_handling.py`** -- detects bare `except:` and broad handlers without a direct raise or a call on a conventionally named logger
 - **`scripts/check_file_length.py`** -- enforces max 400 logical lines per file
 - **`scripts/check_timeless_comments.py`** -- detects temporal keywords in comments and docstrings (for example, legacy, new, old); explicit exemptions and TODO/FIXME comments are allowed
 - **`scripts/check_private_test_imports.py`** -- forbids tests from importing leading-underscore first-party symbols; auto-detects first-party packages, supports `--package` overrides and a `# allow: private-test-imports` carve-out
+- **`scripts/architecture/`** -- reusable stdlib-only package for architecture policy, import extraction, independent gates, cycle checks, direct-importer budgets, and exact baseline ratcheting; copy the complete directory including `LICENSE`
 
 ### Assets
 
 Files in `assets/`. Copy these to the target repo.
+
+- **`assets/architecture.toml`** -- starter executable architecture policy; adapt actual source roots and responsibilities before enabling the checker
 
 - **`assets/hookify.taste-enforcer.md`** -- hookify rule (prompt event) that captures user taste preferences and codifies them as hooks, rules, or config. Copy to `.claude/`.
 - **`assets/hookify.no-junk-drawers.md`** -- hookify rule (file event) that warns on junk-drawer module names (utils.py, helpers.py, misc.py) by filename match. Copy to `.claude/`.

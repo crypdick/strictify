@@ -33,11 +33,17 @@ The command is a thin entry point; all logic lives in the skill.
   (the native `prek.toml` template), and `beartype-setup.md`. The
   `architecture-boundaries.md` reference specifies package ownership, independent
   visibility/direction gates, composition roots, and shrinking baselines for a
-  repo-selected checker. Each reference explains when and how to adapt its policy.
+  repo-selected checker. `architecture-toolkit.md` documents the bundled checker's
+  installation, schema, and starter template. Each reference explains when and how
+  to adapt its policy.
 - **`scripts/`** — custom prek hook scripts copied into the target repo's
   `scripts/prek_hooks/`: `check_exception_handling.py`,
   `check_file_length.py`, `check_timeless_comments.py`, and
-  `check_private_test_imports.py`. Ruff owns print/logging and future-import checks.
+  `check_private_test_imports.py`. The `architecture/` subdirectory is a reusable
+  stdlib-only package: its `api.py` is the public CLI/API; policy/schema, discovery,
+  imports, baseline, budgets, cycles, and standalone constraints remain internal.
+  Copy the full directory including its MIT license. Ruff owns print/logging and
+  future-import checks.
 - **`assets/`** — files copied into the target repo. `hookify.*.md` rules
   (taste-enforcer, no-junk-drawers) and `agents.red-green-tdd.md` go into `.claude/`;
   only mechanical, low-false-positive matches ship as hooks. `CONVENTIONS.md-EXAMPLE`
@@ -52,12 +58,12 @@ The command is a thin entry point; all logic lives in the skill.
   is produced by the agent following `SKILL.md`, and by the tools (ruff, mypy,
   prek, …) it installs into the *target* repo. Strictify itself has no
   dependencies to install and nothing to import.
-- **Hook scripts are self-contained and stdlib-only.** Every script in `scripts/`
-  imports nothing beyond the standard library (`argparse`, `ast`, `io`, `re`,
+- **Hook scripts are self-contained and stdlib-only.** The four single-file hooks in `scripts/`
+  import nothing beyond the standard library (`argparse`, `ast`, `io`, `re`,
   `sys`, `tokenize`, `pathlib`) so it can be dropped into any target repo and
   run under prek without adding dependencies. A unittest regression suite exercises hook behavior and the shipped Ruff
   configuration; prek supplies pinned Ruff for these integration checks.
-- **Agent-readable output.** Every hook reports violations as
+- **Agent-readable output.** The single-file hooks report violations as
   `{file}:{line}: {message} -- {remediation}`, exits nonzero on failure, and honors
   `# allow: {hook-name}` exemptions on the relevant line (or in the first five
   lines for file length). Ruff owns syntax and encoding diagnostics. This contract
@@ -72,53 +78,47 @@ The command is a thin entry point; all logic lives in the skill.
 
 ## Repository boundary enforcement
 
-[architecture.toml](architecture.toml) registers every Python source as a shipped
-hook, repository tool, or test. [tools/check_architecture.py](tools/check_architecture.py)
-checks that registry and permits only static standard-library imports. A local
-module with a standard-library name cannot bypass this restriction. New Python
-files require registration; deleted files require removing their registrations.
-Git supplies the whole source list: tracked and non-ignored untracked `.py` files,
-including root modules. Ignored, untracked build artifacts are outside this scope.
+[architecture.toml](architecture.toml) is a worked instance of the same executable
+schema shipped to target repositories. [The public toolkit CLI](skills/strictify/scripts/architecture/api.py)
+checks ownership, exact public modules, independent visibility/direction gates,
+policy cycles, and optional package cycles. It replaces the repository-only source
+registry checker; there is no second architecture implementation.
 
-Each hook and tool is a single-module unit whose public surface is its CLI and
-public functions. There are no cross-unit static imports, so role layers, `api.py`
-facades, cycle checks, and inbound-importer budgets add no constraint here. No debt
-baseline is needed. If the repository gains a shared multi-module package, apply
-the [category-15 guidance](skills/strictify/references/architecture-boundaries.md)
-before changing this policy.
+The four single-file hooks and repository tool are exact single-module units.
+The toolkit is one multi-module package exposing only its `api` module. Tests form
+one owned package. Strictify needs no application layers, composition roots,
+inbound-importer budget, or adoption baseline. Its graph is currently independent
+units, with internal toolkit imports. The reusable toolkit's layered behavior,
+composition roots, optional budgets, and ratchet are exercised in temporary fixture
+repositories through a copied package's public CLI.
 
-The exact test-loader exception in `architecture.toml` lets that harness load
-standalone hooks by source path to test public functions. It does not permit static
-third-party imports or grant loader access to other files. Removing the last loader
-call makes the exception stale and fails the check. CLI tests also run each hook
-as a copied file with isolated Python import paths; Ruff checks private attribute
-access in tests.
+The repository enables `stdlib_only` across all scanned sources and exact
+`standalone_modules` for the independent scripts and existing test harnesses.
+The exact loader exception permits the public-hook test harness, not static
+third-party imports or other loader callers. Unused exceptions fail. Tests also
+run each single-file hook with isolated Python import paths. The toolkit is copied
+and tested as a package, preserving its distinct distribution contract.
 
-The checker scans relative imports, re-exports, and type-checking blocks. It
-recognizes direct calls to common import loaders, including import aliases, and
-rejects them outside the registered harness. It does not trace reassigned callables,
-arbitrary reflection, subprocess behavior, or data-file access. This is a static
-dependency check; the copied-hook tests verify actual standalone execution.
+Git supplies tracked and non-ignored untracked Python files under the configured
+roots. Strictify uses the whole repository root, so new root modules cannot evade
+ownership. Source symlinks and stale declarations fail. Git subprocesses clear
+inherited `GIT_*` context to protect fixture initialization and `--root` scans.
+The [toolkit guide](skills/strictify/references/architecture-toolkit.md) owns the
+complete schema, copied-install procedure, baseline rules, and AST limitations.
+The [starter policy](skills/strictify/assets/architecture.toml) demonstrates a
+small application and test layout without imposing those roles on Strictify.
 
-This repo needs source registration and a stdlib allowlist rather than a package
-dependency graph. Import Linter's [package contracts](https://import-linter.readthedocs.io/en/v2.11/get_started/configure/)
-do not supply those two checks; the small repo-local checker covers this policy
-without adding a dependency or changing the distributed scripts' layout.
-
-`prek.toml` runs the architecture check over the whole tree on every invocation.
-[.github/workflows/checks.yml](.github/workflows/checks.yml) runs the same hook suite
-on pushes and pull requests. Use `uvx prek install` to enable local commit checks,
-and `uvx prek run --all-files` for a full run. The repository checks require
-Python 3.11 or newer and Git. Boundary regression tests use temporary repositories
-through the checker's CLI.
-Git subprocesses clear inherited `GIT_*` variables so a commit hook cannot redirect
-fixture initialization or a `--root` scan into the invoking repository.
+`prek.toml` runs `python -m skills.strictify.scripts.architecture.api` over the
+whole tree. [.github/workflows/checks.yml](.github/workflows/checks.yml) runs the
+same hook suite on pushes and pull requests. Use `uvx prek install` locally and
+`uvx prek run --all-files` for verification. The checker requires Python 3.11+
+and Git, with no external Python dependencies.
 
 ## Non-goals
 
 - Strictify does not enforce most categories on *this* repo — there is no Python
   package here and no `pyproject.toml`; its native `prek.toml` runs the
-  repo-agnostic checks, standalone-script architecture policy, and bundled hook
+  repo-agnostic checks, shared-toolkit architecture policy, and bundled hook
   regression tests.
 - It targets Python repos only; the analysis and configs assume a Python toolchain.
 
