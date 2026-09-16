@@ -45,6 +45,23 @@ class HookCliTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 1)
                 self.assertIn("sample.py:3:", result.stdout)
 
+    def test_each_hook_runs_as_a_single_copied_file(self) -> None:
+        for script in sorted(SCRIPTS.glob("*.py")):
+            with self.subTest(script=script.name):
+                copied = self.root / "standalone.py"
+                copied.write_bytes(script.read_bytes())
+                fixture = self.root / "test_example.py"
+                fixture.write_text("value = 1\n", encoding="utf-8")
+                result = subprocess.run(  # noqa: S603 -- copied hook and isolated fixture
+                    [sys.executable, "-I", str(copied), str(fixture)],
+                    cwd=self.root,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(fixture.read_text(encoding="utf-8"), "value = 1\n")
+
     def test_exception_logging_requires_a_logger_receiver(self) -> None:
         for receiver, expected in (("logger", 0), ("logging", 0), ("audit_logger", 0), ("widget", 1)):
             with self.subTest(receiver=receiver):

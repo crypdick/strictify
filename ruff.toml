@@ -118,6 +118,7 @@ max-complexity = 15
 "skills/strictify/scripts/**/*.py" = ["T201"]
 "tests/**/*.py" = ["PT"]
 "tools/check_category_count.py" = ["T201"]
+"tools/check_architecture.py" = ["T201"]
 
 [format]
 quote-style = "double"

@@ -137,7 +137,12 @@ Run the regression suite with its pinned Ruff dependency:
 uv run --no-project --with ruff==0.15.20 python -m unittest discover -s tests
 ```
 
-Run all repository checks with `uvx prek run --all-files`.
+Run all repository checks with `uvx prek run --all-files`; enable commit checks
+with `uvx prek install`. CI runs the same suite. The repository's
+[architecture policy](architecture.toml) registers Python sources and keeps hooks
+independent and stdlib-only. See [architecture enforcement](ARCHITECTURE.md#repository-boundary-enforcement)
+for scope, exceptions, and tests. Repository checks require Python 3.11 or newer
+and Git.
 
 ## License
 
