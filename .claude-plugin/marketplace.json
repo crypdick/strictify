@@ -11,7 +11,7 @@
       "name": "strictify",
       "source": "./",
       "description": "Add Python code quality checks to a repo. Reviews existing config, proposes changes across 22 categories, and installs hookify rules to capture coding preferences.",
-      "version": "0.8.1"
+      "version": "0.8.2"
     }
   ]
 }
