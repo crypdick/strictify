@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -16,10 +17,12 @@ class ArchitectureTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+        self.git_env = {name: value for name, value in os.environ.items() if not name.startswith("GIT_")}
         subprocess.run(  # noqa: S603 -- isolated fixture repository
             ["git", "init", "--quiet", str(self.root)],  # noqa: S607 -- Git is required on PATH
             check=True,
             capture_output=True,
+            env=self.git_env,
         )
         self.write("hook.py", "import ast\nfrom pathlib import Path\n")
         self.write("tools/check.py", "import sys\n")
@@ -144,6 +147,43 @@ class ArchitectureTests(unittest.TestCase):
     def test_source_parse_failure_is_not_a_clean_scan(self) -> None:
         self.write("hook.py", "def broken(\n")
         self.assert_rejected("architecture-parse")
+
+    def test_fixtures_do_not_modify_the_invoking_hooks_repository(self) -> None:
+        for command in (
+            [
+                "git",
+                "-c",
+                "user.name=Fixture",
+                "-c",
+                "user.email=fixture@example.invalid",
+                "commit",
+                "--allow-empty",
+                "--quiet",
+                "-m",
+                "fixture",
+            ],
+            ["git", "worktree", "add", "--quiet", "--detach", str(self.root / "linked")],
+        ):
+            subprocess.run(  # noqa: S603 -- fixed Git commands in the temporary repository
+                command, cwd=self.root, capture_output=True, check=True, env=self.git_env
+            )
+        config = self.root / ".git/config"
+        original = config.read_bytes()
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "unittest",
+                "tests.test_architecture.ArchitectureTests.test_registered_stdlib_sources_pass",
+            ],
+            cwd=CHECKER.parents[1],
+            env={**os.environ, "GIT_DIR": str(self.root / ".git/worktrees/linked")},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(config.read_bytes(), original)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

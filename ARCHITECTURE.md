@@ -111,6 +111,8 @@ on pushes and pull requests. Use `uvx prek install` to enable local commit check
 and `uvx prek run --all-files` for a full run. The repository checks require
 Python 3.11 or newer and Git. Boundary regression tests use temporary repositories
 through the checker's CLI.
+Git subprocesses clear inherited `GIT_*` variables so a commit hook cannot redirect
+fixture initialization or a `--root` scan into the invoking repository.
 
 ## Non-goals
 

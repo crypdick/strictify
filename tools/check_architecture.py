@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -67,12 +68,15 @@ def _load_policy(root: Path) -> tuple[dict[str, str], dict[str, str]]:
 
 
 def _source_files(root: Path) -> set[str]:
+    # Git hooks export their repository location; --root must select this scan's repo.
+    env = {name: value for name, value in os.environ.items() if not name.startswith("GIT_")}
     result = subprocess.run(
         ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", "*.py"],  # noqa: S607 -- Git is required on PATH
         cwd=root,
         check=True,
         capture_output=True,
         text=True,
+        env=env,
     )
     return {name for name in result.stdout.split("\0") if name and (root / name).exists()}
 
