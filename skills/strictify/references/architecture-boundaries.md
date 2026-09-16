@@ -1,159 +1,114 @@
 # Architecture boundary enforcement
 
-Use for category 15 when a Python repo has meaningful package boundaries and
-cross-package consumers. Choose roles, public API conventions, and strictness from
-the repo's actual responsibilities. Small programs may need only a documented
-import invariant. This reference specifies enforcement behavior without prescribing
-one universal layer hierarchy. The bundled [architecture toolkit](architecture-toolkit.md)
-provides a configurable `architecture.toml` checker, starter policy, setup steps,
-schema, and baseline format when the target has no equivalent enforcement.
+Use category 15 for repos with meaningful package boundaries and external
+consumers. Derive roles and APIs from actual responsibilities. Small programs may
+need only a documented import invariant. The [bundled toolkit](architecture-toolkit.md)
+provides a checker when existing tools cannot enforce these contracts.
 
 ## Choose one executable policy
 
-Read existing architecture docs, agent instructions, import checks, and exceptions.
-Trace representative callers through their public APIs to concrete dependencies.
-Execution order is not import direction: label an arrow `A imports B` explicitly.
+Read architecture docs, agent instructions, checks, and exceptions. Trace callers
+through public APIs to dependencies. Label arrows `A imports B`; execution order
+is not import direction.
 
-Reuse a checker already in the repo when it can express the required contracts.
-Otherwise evaluate established dependency-boundary tools and the bundled toolkit
-before writing another checker. Verify the chosen tool's behavior against the cases below; a banned
-import list alone does not establish package ownership or public API visibility.
-Add only checks for gaps, with each invariant owned by one checker.
-
-Keep ownership and allowed dependencies in version-controlled executable config.
-Use the selected tool's native format; use `architecture.toml` for a custom policy.
-Do not maintain two handwritten copies of the same allowlists. Link to this source
-of truth from the canonical architecture map and `AGENTS.md`/`CLAUDE.md`.
+Reuse existing enforcement where possible. Before writing a checker, evaluate
+established tools and the bundled toolkit against the cases below. Assign each
+invariant to one checker. Keep ownership and dependency rules in its native config
+(or `architecture.toml` for custom policy), linked from the architecture map and
+agent instructions. Do not duplicate allowlists.
 
 ## Package ownership and public surfaces
 
-For repos adopting explicit ownership, declare source roots, package roots, roles,
-and exact public modules. An architectural package is an owned unit, which can
-include internal Python subpackages. Specify how nested ownership resolves, and
-reject ambiguous or unclassified modules. Include root-level Python modules;
-moving shared code outside a package must not evade checks.
+Declare source roots, owned packages, roles, and exact public modules. Include
+root-level modules. Define nested ownership and reject ambiguous or unowned
+modules. Internal additions inherit ownership without becoming public; separate
+architectural units need registration.
 
-Keep a namespace-only parent from silently owning every future sibling package.
-New modules inside an owned unit inherit its internal status; new architectural
-units need explicit registration. Where plugin namespaces deliberately allow
-new peers, a one-level family such as `project.plugins.*` can assign ownership
-and an exact `{root}.api` surface. Recursive `**` families must not silently
-promote implementation subpackages to peers.
+Namespace parents must not silently own future siblings. Deliberate plugin
+families may use one-level `project.plugins.*` ownership with `{root}.api` surfaces;
+recursive `**` must not promote implementation packages to peers.
 
-Default to one package-local `<package>.api` for each multi-module unit with
-external consumers. A facade consisting entirely of curated re-exports is useful.
-Keep implementation modules internal regardless of whether their names start with
-an underscore. Single-module units may expose their root module directly; wholly
-internal packages need no public surface. Preserve established public APIs when
-compatibility matters, recording exact alternatives rather than automatically
-renaming a published interface. Do not centralize unrelated facades in one package.
+Prefer a package-local `<package>.api` for multi-module units with external
+consumers; curated re-exports are sufficient. Keep other modules internal
+regardless of underscores. Single-module units may expose their root; internal-only
+units need no public surface. Preserve established APIs through exact alternatives.
 
 ## Two independent import gates
 
 Every cross-package import must satisfy both:
 
-- **Visibility:** its target is an exact declared public module of the owning unit.
-- **Direction:** the importer's role or package may depend on that target's role or
-  package. A public API is not permission for every caller to use it.
+- **Visibility:** The target is an exact public module of its owner.
+- **Direction:** The importer's role/package may depend on the target's role/package.
 
-Imports within one owned unit remain internal. Distinct packages sharing a role
-gain no implicit permission to import each other; express that permission when
-intended. For a layered policy, reject cycles between distinct roles and unknown
-role references. If peer imports are allowed, check package cycles separately when
-the repo requires an acyclic package graph. Do not confuse these two cycle checks.
+Internal imports stay within one owner. Same-role packages need explicit permission
+to import peers. Reject unknown roles and cycles between distinct roles. Check
+package cycles separately if peers must also form an acyclic graph.
 
-List composition roots by exact module name. These modules may select and wire
-private concrete implementations across otherwise restricted boundaries. Keep
-exceptions confined to assembly; do not exempt a whole application package.
-Reject stale composition-root names and document which gates they bypass.
+Name composition roots exactly. Document which gates they bypass for assembly of
+private implementations; do not exempt sibling modules or whole applications.
+Reject stale names.
 
-Choose roles by responsibility. For a ports-and-adapters design, distinguish
-adapters that invoke use cases from adapters that implement capabilities used by
-those use cases. Move stable semantic contracts inward; use a use-case-owned port
-when substitution, trust, lifecycle, or transaction ownership needs inversion.
-A facade provides encapsulation, not dependency inversion. Avoid adding a port
-for every concrete dependency or requiring a dependency-injection framework.
+For ports-and-adapters designs, distinguish callers of use cases from providers
+of capabilities. Move stable contracts inward. Introduce use-case-owned ports
+where substitution, trust, lifecycle, or transaction ownership needs inversion.
+A facade only encapsulates; it does not invert dependencies. Do not require a port
+for every dependency or a dependency-injection framework.
 
 ## Shared root-module budgets
 
-When root-level shared modules are becoming dependency hubs, propose a limit on
-distinct direct first-party importers per module. Select a threshold from the
-repo's size and coupling; do not copy a fixed number from another project. Count
-importing modules, not import statements or visualization graph degree.
-
-Allow justified exceptions only for exact source paths, with a reason. An inbound
-budget exemption must not relax the module's outbound dependency rules. Existing
-over-budget modules may use a shrinking count baseline; growth fails, improvement
-requires lowering the recorded count, and reaching the limit removes the entry.
+Where shared root modules become dependency hubs, limit distinct direct first-party
+importers per module. Choose a threshold from repo size and coupling. Count modules,
+not import statements or graph degree. Exact path exemptions need reasons and
+must leave outbound rules active. Existing excess may use a count baseline that
+fails growth and requires updating after improvement or removal at the limit.
 
 ## Adopt and shrink an exact baseline
 
-First distinguish real design debt from a misclassified role or intentional public
-API. Fix policy errors before measuring debt. Install checks and preserve current
-behavior within the approved scope; a larger package migration is separate work.
+Fix misclassified roles and intentional API declarations before recording debt.
+Keep broader migrations outside enforcement setup unless already authorized.
 
-If adoption needs exceptions, keep them in the tool's baseline format or
-`architecture-baseline.toml`. Bootstrap once from reviewed current violations.
-Each exception identifies the importer, imported target, gate, import kind
-(runtime or type-checking), occurrence count, and reason. Include role identity
-where needed to prevent a role change from silently reusing an exception. Do not
-key exceptions by line number, use wildcard ignores, or allow one total count to
-hide replacement of a removed violation with a different one.
+Bootstrap reviewed exceptions once in the tool's format or
+`architecture-baseline.toml`. Record importer, target, gate, runtime/type-checking
+kind, occurrence count, reason, and role identities where needed. No line-number
+keys, wildcard ignores, or aggregate counts that let one violation replace another.
 
-On every check:
+Fail on unrecorded violations, growth, stale/reduced entries, duplicates, malformed
+records, and missing reasons. Policy/schema errors cannot enter the baseline.
+Never regenerate it or weaken policy to pass checks. Review edits: a current-tree
+check cannot prevent someone from expanding exceptions in the same commit.
 
-- Fail on any unrecorded violation or growth in a recorded occurrence count.
-- Fail on stale entries or reduced counts until the baseline is shrunk.
-- Reject duplicate, malformed, or unexplained exceptions.
-- Keep policy/schema errors outside the baseline; debt must not hide invalid
-  ownership, missing public modules, or invalid role references.
-
-Treat policy and baseline edits as reviewed changes. A current-tree check cannot
-prove that someone did not add an exception in the same commit. Never regenerate
-the baseline or weaken the policy just to make a failing check pass.
-
-Burn down debt one owned package at a time: verify its role, curate its public API,
-migrate all cross-package consumers, update its declared surface, resolve direction
-violations, and remove every stale exception in that pass. Preserve compatibility
-where required. A pass is complete when its behavior checks and boundary checks
-pass without the removed exceptions.
+Migrate one owned package at a time: verify its role, curate its API, update all
+consumers and declarations, fix direction violations, and remove stale exceptions.
+Preserve required compatibility. Finish with behavior and boundary checks passing.
 
 ## Integration and observable verification
 
-Run architecture checks over all configured first-party roots, not just changed
-files: a facade or policy edit can invalidate untouched consumers. In prek use
-`pass_filenames = false` and `always_run = true`. Invoke the same check from CI,
-either through the existing full-hook job or directly. Configure the actual
-installed command; do not add an entry for a nonexistent bundled script.
+Check all configured roots, including tests, generated code, and separate runtimes
+unless explicitly excluded. Use `pass_filenames = false` and `always_run = true`
+in prek, and run the same installed command in CI. Unchanged consumers can break
+when policy or facades change.
 
-Check runtime imports, relative imports, re-exports, and `TYPE_CHECKING` imports.
-For repos using dynamic imports, cover literal loader targets where supported.
-Document limits for computed module names and alias resolution; AST analysis
-does not prove the absence of arbitrary runtime dependencies. Generated code,
-tests, and separate runtimes need explicit source scope, not silent omissions.
+Cover static, relative, re-export, and `TYPE_CHECKING` imports; literal dynamic
+imports where supported. Document computed-name and alias-resolution limits.
+AST analysis cannot prove the absence of runtime dependencies.
 
-Use small temporary fixture packages through the selected checker's public CLI
-or public API to verify the adopted rules. Establish failing cases before adding
-custom enforcement, then run the same cases against the implementation:
+Use temporary fixtures through the public CLI/API. Before adding custom checks,
+establish failing cases, then verify:
 
-- An allowed public import passes; importing an internal module from an otherwise
-  allowed role fails visibility; an import of a public module from a forbidden
-  role fails direction. Violating both produces both findings.
-- Internal imports pass. An exact composition root can wire an adapter, while a
-  sibling module cannot borrow its exception.
-- Adding an unowned architectural unit fails; adding an internal module does not
-  expose it. A declared public target must exist and belong to its declared owner.
-- Relative and type-checking forms of a forbidden import remain forbidden.
-  Exercise literal dynamic imports if the repo relies on them.
-- Invalid roles, stale roots, duplicate ownership, and prohibited cycles fail.
-  Test family expansion and root-module budgets only if those features apply.
-- A reviewed exact baseline passes. Another target cannot reuse its allowance;
-  increased occurrences fail; removing an import requires shrinking or deleting
-  its baseline entry.
-- If inbound budgets apply, repeated imports by one module count once. An exact
-  budget exemption leaves outbound restrictions active.
+- Allowed public and internal imports pass. Private targets fail visibility;
+  forbidden public dependencies fail direction; violating both reports both.
+- Exact composition roots can assemble implementations; siblings cannot.
+- Unowned units and nonexistent/wrong-owner public modules fail. Internal
+  additions remain private.
+- Relative and type-checking forms retain restrictions. Exercise literal dynamic
+  targets when used.
+- Unknown roles, stale roots, duplicate ownership, and prohibited cycles fail.
+  Test family expansion if enabled.
+- Reviewed baselines pass; replacement targets and increased occurrences fail.
+  Removed imports require shrinking/deleting entries.
+- If budgets apply, repeated imports from one module count once, and exemptions
+  leave outbound restrictions active.
 
-Diagnostics should identify the source location, importer, target, violated gate,
-and permitted surface or direction, with a concrete remediation. Exit nonzero on
-violations and malformed policy. Run the full check on the target repo, its normal
-behavior tests for any migrated code, and the required hook suite before handoff.
+Diagnostics must identify location, importer, target, gate, permitted API/direction,
+and remediation. Exit nonzero for violations or malformed policy. Run the full
+repo check, behavior tests for migrated code, and required hooks before handoff.

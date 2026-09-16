@@ -1,42 +1,13 @@
 # Design Conventions
 
-> Copy this strictify template to your repo as `CONVENTIONS.md`. Remove principles
-> that don't fit, use the repo's types in examples, and add its conventions. Add
-> a pointer to `CLAUDE.md` / `AGENTS.md` (e.g. "See `CONVENTIONS.md` for design
-> principles") so agents load it.
-
-These principles require reading the code to apply. Use them to decide when a `str`
-needs a domain type, when inheritance fits, and how to keep code and documentation
-consistent. Check the caveats before applying a principle.
-
----
+> Adapt this template into root `CONVENTIONS.md`: keep applicable principles, use
+> repo types in examples, and add local conventions. Link it from agent instructions.
 
 ## Composition over inheritance
 
-Combine focused components so each can be tested independently and new features
-can be added without editing the core. Components can also avoid invalid combinations
-of configuration flags, as in the report example below.
-
-Subclass chains and mixins can couple classes across files:
-
-```python
-# AVOID
-class SalesReportWithChartAndFooter(SalesReportWithChart): ...
-class Report(TitleMixin, ChartMixin, FooterMixin): ...  # MRO surprises
-```
-
-A class with many boolean feature flags can accept contradictory settings.
-For example, `Report(show_footer=False, footer_text="Confidential")` type-checks
-but silently drops the text:
-
-```python
-# AVOID
-class Report:
-    def __init__(self, show_title: bool = True, show_footer: bool = True,
-                 footer_text: str | None = None, ...): ...
-```
-
-Instead, give the report a list of sections to render:
+Combine focused components when feature variants multiply subclasses or boolean
+flags. For example, let a report render sections rather than encoding every
+combination in subclasses:
 
 ```python
 from typing import Protocol
@@ -44,49 +15,20 @@ from typing import Protocol
 class Renderable(Protocol):
     def render(self) -> str: ...
 
-class Title:
-    def __init__(self, text: str): self.text = text
-    def render(self) -> str: return f"# {self.text}"
-
-class Report:                       # a combiner, not a god class
+class Report:
     def __init__(self, sections: list[Renderable]):
         self.sections = sections
+
     def render(self) -> str:
-        return "\n\n".join(s.render() for s in self.sections)
-
-Report([Title("Sales"), Table(rows), Footer("Generated automatically")])
+        return "\n\n".join(section.render() for section in self.sections)
 ```
 
-`Report` joins rendered sections without needing to know their types. `mypy`
-catches a section missing `render`. This structure also suits UIs, where components
-correspond to parts of the output.
-
-For behavior that needs to vary, inject a strategy:
-
-```python
-# AVOID: class EmailNotifier(Notifier), class SmsNotifier(Notifier), ...
-class Transport(Protocol):
-    def deliver(self, msg: str) -> None: ...
-
-class Notifier:
-    def __init__(self, transport: Transport):
-        self.transport = transport          # shared logic lives here, once
-    def send(self, msg: str) -> None:
-        self.transport.deliver(msg)
-
-Notifier(EmailTransport()).send("hi")
-```
-
-Inheritance still fits framework base classes, `Enum`, `Exception`, and is-a
-relationships without combinatorial variants. Consider composition when adding
-variants requires more subclasses or constructor flags.
-
----
+Inject a strategy for behavior that varies. Inheritance still fits framework base
+classes, `Enum`, `Exception`, and is-a relationships without combinatorial variants.
 
 ## Parse, don't validate
 
-Coerce unstructured data into constrained types at the boundary of the system, so
-downstream code never re-validates. Don't check a condition and then discard the proof.
+Validate external input once at the boundary and return typed domain values:
 
 ```python
 from collections.abc import Mapping
@@ -108,58 +50,30 @@ def parse_user_request(data: object) -> UserRequest:
     return UserRequest(user_id=UserId(user_id))
 ```
 
-The parser checks external input before constructing the domain value. Neither
-`NewType` nor a frozen dataclass validates types or domain constraints at runtime;
-`frozen=True` prevents ordinary field reassignment. Route untrusted input through
-the parser, then let typed internal functions accept `UserRequest`. If construction
-must enforce invariants everywhere, validate in `__post_init__` or use a validating
-model instead.
-
-Apply the same boundary to untyped SDK results, HTTP responses, and DB rows so raw
-values do not leak downstream. Pydantic field validators do perform runtime
-validation; use them for value constraints. A field annotated `str` remains `str`
-for static checking. Add a distinct semantic type when static separation between
-concepts matters, after validating its value.
-
----
+Route untrusted HTTP, SDK, and DB values through parsers. `NewType` and frozen
+dataclasses do not validate input; freezing only prevents ordinary reassignment.
+If every construction must enforce invariants, use `__post_init__` or a validating
+model. Pydantic validators enforce values, but a `str` field remains `str` to the
+type checker. Add a semantic type when static distinction matters.
 
 ## Semantic types for domain concepts
 
-Give domain values a distinct type instead of a bare primitive. `NewType` preserves the underlying value at runtime and catches category errors at type-check time (passing an `OrgId` where a
-`UserId` is expected).
+Use `NewType` when confusing two primitive values would be a domain error, such as
+passing `OrgId` where `UserId` is required. It preserves the runtime value while
+adding a distinct static type; `TypeAlias` only supplies another name.
 
-```python
-from typing import NewType
-
-UserId = NewType("UserId", str)
-Amount = NewType("Amount", int)
-
-def get_user(user_id: UserId) -> User: ...   # clear intent, mis-use is a type error
-```
-
-Use distinct types for identifiers, amounts, slugs, tokens, emails, URLs, and paths
-when accepting the wrong `str` or `int` would be a domain error. Leave primitives
-without domain meaning, such as loop counters and generic buffer sizes, unwrapped.
-
----
+Apply this to meaningful IDs, amounts, slugs, tokens, emails, URLs, and paths.
+Leave generic counters and buffer sizes as primitives.
 
 ## Keep code and its documentation coupled
 
-When a concrete value in code is *also* stated in prose (env-var allowlists, blocked
-patterns, mount tables, config keys, user-facing names), the two drift out of sync
-unless they reference each other.
+Where docs repeat a code value, add a back-pointer at its definition:
 
 ```python
 # NOTE: Update docs/security.md § Credential Handling if you change this list.
 allowed_vars = ["PATH", "HOME", "USER"]
 ```
 
-- **Introducing a documented value:** add a `NOTE:` comment at the code site naming the
-  doc file and section.
-- **Changing a value that has a `NOTE:`:** read the referenced doc and update it in the
-  same change. Don't merge code that silently contradicts its own docs.
-- **Editing docs:** if you're restating a concrete value (a list, a table, an
-  allowlist), consider whether the code site deserves a `NOTE:` back-pointer.
-
-**Caveat:** for small projects with no published docs, skip this. Apply it where code
-and prose describe the same thing and drift would mislead readers.
+Update linked docs with code changes. When editing prose lists or tables, check
+whether the corresponding code needs a pointer. Skip this where no published
+docs duplicate code values or drift would not mislead readers.

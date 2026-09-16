@@ -1,40 +1,34 @@
 # Install the bundled architecture toolkit
 
-Use this toolkit when a target Python repository needs the ownership, public API,
-direction, and ratchet contracts in [architecture-boundaries.md](architecture-boundaries.md)
-and does not already have equivalent enforcement. Python 3.11+ and Git are required;
-there are no third-party runtime dependencies. The package is adapted from
-Pynchy's MIT-licensed checker, with generic configuration and stricter validation.
+Use when existing tools cannot enforce the [boundary contracts](architecture-boundaries.md).
+Requires Python 3.11+ and Git; no third-party runtime dependencies. Adapted from
+Pynchy's MIT-licensed checker.
 
 ## Setup on a new repository
 
-1. Copy the entire `scripts/architecture/` directory from this skill into
-   `scripts/prek_hooks/architecture/` in the target, including its `LICENSE`.
-   Do not copy just `api.py`: this checker is a small package, unlike the four
-   independent single-file hooks. No editable install or PYTHONPATH change is needed.
-2. Copy `assets/architecture.toml` to the target root. Adapt its example names to
-   actual files, roles, and import relationships. The starter expects `src/app/`
-   with `__init__.py`, `cli.py`, and `core/{__init__,api}.py`, plus `tests/__init__.py`.
-   Do not create artificial application layers just to fit the example.
-3. Register every intended source root, including repository tools, tests, and
-   separate runtimes. For flat layouts use `path = ".", module = ""`; for a
-   package under `src/` use its importable package name as the module prefix.
-   Nested roots must be excluded from their enclosing root to avoid duplicate
-   discovery. Explain intentional scope exclusions in the architecture map.
-4. Run from the repository root:
+1. Copy the entire `scripts/architecture/` directory, including `LICENSE`, to
+   `scripts/prek_hooks/architecture/`. No editable install or `PYTHONPATH` change
+   is needed.
+2. Copy `assets/architecture.toml` to root `architecture.toml` and adapt its roles
+   and imports. Its example uses
+   `src/app/{__init__,cli}.py`, `src/app/core/{__init__,api}.py`, and `tests/__init__.py`.
+   Do not create layers to fit the example.
+3. Register intended roots, including tools, tests, and separate runtimes. Use
+   `path = ".", module = ""` for flat layouts and the importable package prefix
+   for packages under `src/`. Exclude nested roots from their enclosing root;
+   document intentional scope exclusions.
+4. From the repo root, run:
 
    ```bash
    uv run --no-project python -m scripts.prek_hooks.architecture.api
    ```
 
-   Outside that directory, `--root /path/to/target` selects the repository to scan;
-   the copied package must still be importable from the invocation directory.
-   `--policy` and `--baseline` select files relative to `--root` (absolute paths
-   also work). Success exits 0, violations exit 1, malformed configuration exits 2.
-5. Fix classification errors first. For existing design debt, manually review
-   exact exceptions in `architecture-baseline.toml` using the format below.
-   An absent baseline means zero allowed debt. There is deliberately no blanket
-   baseline regeneration command. Once the check passes, wire it into prek:
+   `--root` selects the repo; the copied package must remain importable from the
+   invocation directory. `--policy` and `--baseline` accept absolute paths or paths
+   relative to `--root`. Exit codes: 0 success, 1 violations, 2 invalid config.
+5. Fix classification errors, then review exact debt exceptions using the baseline
+   format below. No baseline means zero allowed debt; no regeneration command exists.
+   Once passing, merge this hook into prek:
 
    ```toml
    [[repos]]
@@ -44,11 +38,10 @@ Pynchy's MIT-licensed checker, with generic configuration and stricter validatio
    ]
    ```
 
-   Merge this into existing local hooks rather than replacing them. Run the same
-   full-hook command from CI, and `uvx prek install` locally.
-6. Link `architecture.toml` from the canonical architecture map and agent
-   instructions. Run the [contract cases](architecture-boundaries.md#integration-and-observable-verification)
-   against the installed CLI and normal behavior tests for any migrated code.
+6. Run the same full-hook command in CI and `uvx prek install` locally. Link policy
+   from the architecture map and agent instructions. Verify the installed CLI
+   against the [contract cases](architecture-boundaries.md#integration-and-observable-verification)
+   and run behavior tests for migrated code.
 
 ## Policy schema (version 2)
 
@@ -147,15 +140,11 @@ and data-file access are not a complete dependency graph. Standalone mode also
 rejects recognized direct import loaders (including common aliases), but is not
 a sandbox. Keep behavior tests for copied scripts and actual runtime boundaries.
 
-Source roots are explicit scope, not proof every Python file in a repository was
-included. Empty/missing roots and duplicate discovered module names fail; code
+Source roots define scan scope; they need not include every Python file. Empty/missing roots and duplicate discovered module names fail; code
 outside configured roots does not. Deliberately scope generated or vendored code.
 
 ## Strictify as the worked example
 
-Strictify's root `architecture.toml` uses this same shipped package through
-`python -m skills.strictify.scripts.architecture.api`. Its independent hooks and
-repository tools are exact single-module units; the architecture toolkit is one
-multi-module unit exposing only its `api` module. Tests form their own unit.
-The repo enables stdlib-only and standalone constraints, exact loader exceptions,
-and package-cycle checking without inventing application layers or debt.
+Strictify uses this package through `python -m skills.strictify.scripts.architecture.api`.
+Its [architecture map](../../../ARCHITECTURE.md#repository-boundary-enforcement)
+explains the repo policy, standalone constraints, and tests.

@@ -1,56 +1,22 @@
 # Strict pyproject.toml reference
 
-Use these tool configurations for `pyproject.toml`.
-Read each section's notes and adapt settings to the target project's
-framework, size, and conventions. Copy sections verbatim unless the commentary calls for
-adjustment.
+Use these configs for `pyproject.toml`. Adapt only where the notes or target repo
+require it; replace `{package_name}` with the production package.
 
----
+## [tool.ruff] -- Linting and formatting
 
-## [tool.ruff] -- Linting and Formatting
+Default line length is 110; use 88 for Black-compatible projects. Keep the curated
+selection: no `ALL`, top-level preview, unsafe fixes, or formatter-conflicting
+`COM`, `Q`, or `ISC` families. Lint-scoped preview with
+`explicit-preview-rules = true` enables only exact preview codes. Formatter
+preview stays disabled.
 
-Ruff replaces flake8, isort, pyupgrade, and black in a single fast tool.
+Selected `D` and `DOC` rules detect empty or stale docstrings without requiring
+filler documentation. Do not enable either whole family. For `ANN401`, parse
+untrusted input into domain models, `TypedDict`, `Protocol`, or narrowed `object`.
+Reserve narrow exemptions for boundaries that cannot be typed honestly.
 
-- `line-length = 110` is the default. Adjust down to 88 for projects that follow strict
-  black-compatible formatting.
-- The rule set is curated and versioned deliberately. Do not enable `ALL`, top-level
-  preview mode, or unsafe fixes: review new rule families and fix safety before opting
-  into them. Lint-scoped preview mode plus `explicit-preview-rules = true` permits the
-  exact preview rules selected below without letting family prefixes silently acquire
-  new preview rules during a Ruff upgrade; formatter preview remains disabled.
-- The `select` list covers builtin shadowing (`A`), explicit annotations (`ANN`),
-  unused arguments (`ARG`), async footguns (`ASYNC`), blind exceptions (`BLE`),
-  bare-tuple comma bugs (`COM818`), naive datetimes (`DTZ`), commented-out code
-  (`ERA`), executable-script hygiene (`EXE`), future annotations (`FA`),
-  boolean-trap APIs (`FBT`), targeted refurb checks (`FURB`), logging hygiene
-  (`G`, `LOG`), package initialization (`INP`), collection string-concat bugs
-  (`ISC004`), naming (`N`), performance/readability (`PERF`), precise
-  suppressions (`PGH`), cleanup rules (`PIE`, `RET`, `RSE`), targeted Pylint
-  checks (`PLC`, `PLE`, `PLW`, selected `PLR`), pytest style (`PT`), pathlib
-  (`PTH`), security footguns (`S`), private-member access (`SLF`), slots on
-  builtin subclasses (`SLOT`), debugger/print bans (`T10`, `T20`),
-  type-checking imports (`TC`), import boundaries (`TID`), targeted exception
-  rules (`TRY004`, `TRY201`, `TRY203`, `TRY300`, `TRY400`, `TRY401`), and
-  Python-version traps (`YTT`).
-- `C90` enables Ruff's mccabe `C901` cyclomatic-complexity check, so complexity
-  enforcement stays inside the normal Ruff pass.
-- `DOC102`, `DOC202`, and `DOC403` catch stale docstring sections after refactors
-  without requiring docstrings everywhere. Selected `D` rules catch empty or
-  structurally misleading docstrings without forcing filler documentation. Do
-  not enable broad `D` or `DOC` by default: agents respond to missing-docstring
-  gates by writing low-value filler.
-- `ANN401` is intentionally strict. Prefer parsing untrusted input at boundaries
-  into domain models, `TypedDict`s, `Protocol`s, or `object` plus narrowing. Use
-  a narrow `# noqa: ANN401` only when a boundary is genuinely dynamic and cannot
-  be typed honestly.
-- This supports the parse-don't-validate convention: coerce unstructured data
-  into constrained types at system boundaries so downstream code can use typed
-  values without repeatedly validating raw `Any` values. See
-  <https://www.ricardodecal.com/opinions/parse-don-t-validate-in-python/>.
-- Do not enable broad `COM`, `Q`, or formatter-conflicting `ISC` settings while
-  using Ruff format. The selected comma and implicit-concat rules detect bugs.
-- `ignore = ["E501", "TRY003"]` defers line-length enforcement to the formatter
-  and avoids exception-class ceremony for simple domain errors.
+`E501` defers to formatting; `TRY003` permits simple domain errors.
 
 ```toml
 [tool.ruff]
@@ -167,9 +133,8 @@ quote-style = "double"
 
 ### Complexity
 
-- `max-complexity = 15` is the default. Lower to 10 for new projects. Raise to 20 only for
-  data-pipeline code with unavoidable branching (and add a comment explaining why).
-  This backs Ruff's `C901` rule.
+Ruff owns complexity through `C901`. Default: 15; use 10 for new projects, or
+20 only for unavoidable data-pipeline branching with an explanatory comment.
 
 ```toml
 [tool.ruff.lint.mccabe]
@@ -178,21 +143,12 @@ max-complexity = 15
 
 ### Per-file ignores
 
-Ruff is the sole owner of print and logging checks (`T201`, `G`, `LOG`).
-Allow print output in tests, tools, scripts, and CLI entry points via the patterns
-below; use `# noqa: T201` for a justified one-line exception elsewhere. Logging
-checks still apply in these locations. Use the specific `G` code for a logging
-exception. Ruff also reports misplaced future imports (`F404`); do not install
-a separate source-rewriting hook for them.
+Ruff owns print/logging checks and misplaced future imports (`F404`). The patterns
+below permit CLI/test/tool output and relax test/script complexity. Logging checks
+still apply. Use narrow `# noqa: T201` or specific `G` codes elsewhere.
 
-- Test files commonly use unused variables (captured return values), high complexity
-  (parameterized setup), many arguments (fixtures), asserts, private-member access,
-  and boolean positional helpers. Suppress these categories wholesale for `tests/`.
-- Scripts similarly get complexity exemptions since they are often one-shot utilities.
-- For Django projects, add `"migrations/**/*.py" = ["E501", "RUF012"]` to suppress
-  auto-generated migration noise.
-- For FastAPI projects, consider adding `"**/routers/**/*.py" = ["B008"]` to allow
-  `Depends()` default arguments.
+For Django, add `"migrations/**/*.py" = ["E501", "RUF012"]`. For FastAPI,
+consider `"**/routers/**/*.py" = ["B008"]` for `Depends()` defaults.
 
 ```toml
 [tool.ruff.lint.per-file-ignores]
@@ -206,27 +162,11 @@ a separate source-rewriting hook for them.
 "**/{cli,main,__main__}.py" = ["T201"]
 ```
 
----
+## [tool.mypy] -- Static type checking
 
-## [tool.mypy] -- Static Type Checking
-
-mypy with `strict = true` enables every strictness flag at once. The `disable_error_code`
-list disables individual checks where needed.
-
-- Start with the minimal `disable_error_code` below. The agent should expand this list
-  only when the target project has specific framework needs (see notes below).
-- `show_error_codes = true` and `pretty = true` display error codes and format diagnostics
-  for readability.
-- The `warn_*` flags are redundant with `strict = true` but are listed explicitly so that
-  the intent is clear even if someone later sets `strict = false`.
-
-**When to adjust `disable_error_code`:**
-
-Run mypy first. For framework-related errors, check the framework's supported
-mypy plugin or type stubs before suppressing diagnostics. Scope necessary
-exceptions to the affected modules and error codes. Do not disable `attr-defined`,
-`override`, `call-arg`, or other correctness checks project-wide merely because a
-framework is installed.
+Run strict mypy before adding exceptions. Check framework plugins and stubs first;
+scope further suppressions to affected modules and error codes. Do not disable
+correctness checks such as `attr-defined`, `override`, or `call-arg` project-wide.
 
 ```toml
 [tool.mypy]
@@ -242,9 +182,8 @@ disable_error_code = ["no-untyped-call", "no-untyped-def"]
 
 ### Test file overrides
 
-If the project intentionally excludes tests from mypy, use an explicit override.
-Keep typed tests checked when practical; fixtures and mocks alone do not require
-disabling all diagnostics. Adapt module names to the actual test layout.
+Use this override only if the project intentionally excludes tests. Fixtures and
+mocks alone do not justify it. Adapt module names to the test layout.
 
 ```toml
 [[tool.mypy.overrides]]
@@ -255,31 +194,18 @@ check_untyped_defs = false
 ignore_errors = true
 ```
 
-**Additional overrides the agent may need:**
+For missing third-party stubs, scope `ignore_missing_imports = true` to the affected
+module, such as `ortools.*`. Never enable it globally.
 
-- For libraries with missing stubs, add an override with `ignore_missing_imports = true`
-  scoped to the specific third-party module (e.g., `module = ["ortools.*", "loguru.*"]`).
-- Never set `ignore_missing_imports = true` globally -- it masks real import errors.
+## [tool.pytest.ini_options] -- Test runner
 
----
-
-## [tool.pytest.ini_options] -- Test Runner
-
-- `asyncio_mode = "auto"` removes boilerplate `@pytest.mark.asyncio` from every async
-  test. Only omit this if the project has no async code at all.
-- `-n auto` enables pytest-xdist parallel execution. Remove for projects with
-  non-parallelizable tests (shared database state, file locks). If the project uses
-  Django, use `--reuse-db` alongside `-n auto`.
-- `--failed-first` re-runs failures before passing tests so developers see recurring failures sooner.
-- `--cov={package_name}` activates pytest-cov and restricts measurement to production
-  code. Reporting flags alone do not start coverage collection. Developers can still use
-  `uv run pytest --no-cov` for a faster one-off run.
-- `--cov-report=term-missing --cov-report=html` provides both terminal and browsable
-  coverage output.
-- `timeout = 20` catches hanging tests early. Increase to 60 for integration tests that
-  hit real services, or add `@pytest.mark.timeout(60)` on individual slow tests.
-- `timeout_method = "thread"` works with both sync and async code. Use `"signal"` only
-  on Unix-only projects where thread-based timeout is unreliable.
+- Omit `asyncio_mode` when the project has no async code.
+- Remove `-n auto` for tests sharing state that prevents parallel execution.
+- `--cov={package_name}` starts collection; report flags alone do not. Use
+  `uv run pytest --no-cov` for a quick run without coverage.
+- Default timeout: 20 seconds. Use 60 for service integration tests or
+  `@pytest.mark.timeout(60)` for individual tests. Choose `signal` only for
+  Unix-only projects where thread timeouts are unreliable.
 
 ```toml
 [tool.pytest.ini_options]
@@ -291,32 +217,15 @@ timeout = 20
 timeout_method = "thread"
 ```
 
-**Framework-specific adjustments:**
+For Django, set `DJANGO_SETTINGS_MODULE` and consider `--reuse-db`. Data pipelines
+may need `timeout = 120` and serial execution for shared heavyweight fixtures.
 
-- **Django:** Add `DJANGO_SETTINGS_MODULE = "myproject.settings.test"` and consider
-  adding `--reuse-db` to `addopts`.
-- **FastAPI:** The defaults above work well. Add `--asyncio-mode=auto` explicitly if
-  using older pytest-asyncio versions.
-- **Data pipelines:** Increase `timeout` to 120 and remove `-n auto` if tests share
-  heavyweight fixtures (database connections, large DataFrames).
+## [tool.coverage] -- Code coverage
 
----
-
-## [tool.coverage] -- Code Coverage
-
-- `branch = true` measures decision outcomes as well as executed lines. Without it, a
-  conditional can count as covered even when only one branch was exercised.
-- `fail_under = 100` is the strict target. The agent should set this to the project's
-  current coverage percentage rounded down to the nearest integer on first adoption,
-  then ratchet it up over time. Setting it to 100 immediately on a legacy codebase will
-  block all commits.
-- `skip_empty = true` excludes `__init__.py` files and other empty modules from the
-  coverage denominator.
-- `fail_under` and `skip_empty` are report settings, not run settings. Putting them under
-  `[tool.coverage.run]` makes Coverage.py ignore the intended enforcement.
-- The `exclude_also` patterns cover common boilerplate that is either untestable or
-  tested implicitly (abstract methods, `TYPE_CHECKING` blocks, `__repr__` methods) while
-  preserving Coverage.py's built-in exclusions.
+Collect branch coverage and target 100%. On adoption, start at measured coverage
+rounded down, then raise the threshold as coverage improves. Put `fail_under`
+and `skip_empty` under `[tool.coverage.report]`; they are not run settings.
+Use `exclude_also` to preserve built-in exclusions.
 
 ```toml
 [tool.coverage.run]
@@ -337,28 +246,17 @@ exclude_also = [
 ]
 ```
 
-**Adjustments:**
+To exclude test infrastructure, add
+`omit = ["*/tests/*", "*/test_*.py", "*/__pycache__/*", "*/conftest.py"]` under
+`[tool.coverage.run]`. For Django, consider `"*/migrations/*"` and `"*/admin.py"`.
+`exclude_also` matches source text, not filenames. Test CLI behavior through
+subprocesses or a public callable.
 
-- Add `omit = ["*/tests/*", "*/test_*.py", "*/__pycache__/*", "*/conftest.py"]` to
-  `[tool.coverage.run]` to exclude test infrastructure from the coverage denominator.
-- For Django, add `"*/migrations/*"` and `"*/admin.py"` to `omit`.
-- Test CLI entry points through subprocess calls or a public callable. `exclude_also`
-  matches source text, not file paths; do not put filename globs there.
+## [tool.vulture] -- Dead code detection
 
----
-
-## [tool.vulture] -- Dead Code Detection
-
-Vulture finds unused Python code -- variables, functions, imports, classes, and attributes.
-
-- Start with `min_confidence = 80`. Lower to 60 to report more possible dead code;
-  raise to 90 if the project uses
-  heavy metaprogramming (ORMs, plugin systems).
-- `exclude = [".venv/"]` prevents scanning vendored dependencies. Add framework-specific
-  excludes as needed (e.g., `"migrations/"` for Django).
-- For projects with Pydantic models, Textual widgets, or other frameworks that use
-  "magic" attribute names, add an `ignore_names` list in pyproject.toml scoped to those
-  patterns (e.g., `"model_config"`, `"on_*"`, `"watch_*"`).
+Start at confidence 80; use 60 for more candidates or 90 for heavy metaprogramming.
+Prefer specific `ignore_names` for known framework callbacks such as `on_*` or
+`watch_*` before raising confidence.
 
 ```toml
 [tool.vulture]
@@ -366,31 +264,15 @@ min_confidence = 80
 exclude = [".venv/"]
 ```
 
-**Adjustments:**
+Set `paths = ["{package_name}", "tests"]` for explicit scope. Exclude generated
+framework files, such as Django migrations and `admin.py`, where needed.
 
-- Add `paths = ["{package_name}", "tests"]` to explicitly scope scanning.
-- For Django projects, add `"*/migrations/"`, `"*/admin.py"` to `exclude`.
-- For projects with many false positives, prefer adding specific names to `ignore_names`
-  rather than raising `min_confidence` -- this keeps detection sensitive while silencing
-  known framework patterns.
+## [tool.deptry] -- Dependency integrity
 
----
-
-## [tool.deptry] -- Dependency Integrity
-
-Use deptry only when the repo has authoritative dependency metadata in `pyproject.toml`
-or another supported format. Skip it for scripts with ad hoc environments, vendored
-trees, and plugin hosts whose imports are intentionally supplied by the host process.
-
-Deptry catches four distinct declaration failures:
-
-- imported packages missing from declared dependencies;
-- declared runtime dependencies that production code does not use;
-- imports that work only because another dependency brings them in transitively;
-- development dependencies imported by production code.
-
-Keep exceptions narrow and rule-specific. Do not globally disable missing- or
-transitive-dependency checks merely because one framework has dynamic imports.
+Use authoritative dependency metadata. Skip ad hoc environments, vendored trees,
+and plugins whose host intentionally supplies imports. Deptry checks missing,
+unused, transitive, and development-only dependencies in production imports.
+Keep exceptions narrow and rule-specific.
 
 ```toml
 [tool.deptry]
@@ -400,30 +282,18 @@ extend_exclude = ["scripts/prek_hooks"]
 # optional_dependencies_dev_groups = ["dev"]
 ```
 
-**Adjustments:**
+Set `optional_dependencies_dev_groups` when development tools live in
+`[project.optional-dependencies]`; `[dependency-groups]` needs no such setting.
+Exclude generated or host-loaded code only after confirming deptry cannot model it.
 
-- Set `optional_dependencies_dev_groups` to the target repo's actual group names when
-  development tools live under `[project.optional-dependencies]`. Standard
-  `[dependency-groups]` entries are recognized as development dependencies directly.
-- Add generated code, migrations, or host-loaded plugin modules to `extend_exclude`
-  only after confirming deptry cannot model the import boundary accurately.
+## [tool.uv] -- Dependency cooldown
 
----
-
-## [tool.uv] -- Dependency Cooldown
-
-Applies only to uv-managed repos. `exclude-newer` stops uv from resolving package
-versions published within the last 3 days.
-
-- A cooldown gives maintainers time to investigate and withdraw problematic releases.
-  It does not guarantee that a release is safe or that a compromise will be detected
-  before the window expires.
-- Requires uv >= 0.9.17 (relative durations). The duration is resolved to a concrete
-  timestamp when the lockfile is written and only moves forward when the lockfile is
-  invalidated (e.g., `--upgrade`), so day-to-day runs do not churn `uv.lock`.
-- When a security fix must land inside the window, override the single package with
-  `exclude-newer-package` (a timestamp, a shorter duration, or `false` to exempt it)
-  instead of loosening the global cooldown.
+For uv-managed repos, delay releases published within three days. Requires
+uv >= 0.9.17. The cutoff becomes a timestamp in `uv.lock` and advances when the
+lockfile is invalidated, such as with `--upgrade`, avoiding daily lockfile churn.
+A cooldown gives maintainers time to withdraw bad releases; it does not prove safety.
+For an urgent fix, override that package with `exclude-newer-package` using a
+timestamp, shorter duration, or `false`, rather than relaxing the global limit.
 
 ```toml
 [tool.uv]

@@ -1,6 +1,6 @@
 {
   "name": "strictify",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Add Python code quality checks to a repo. Reviews existing config, proposes changes across 22 categories, and installs hookify rules to capture coding preferences.",
   "author": {
     "name": "Ricardo Decal"

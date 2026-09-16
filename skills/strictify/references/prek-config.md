@@ -1,38 +1,20 @@
 # Strict prek.toml reference
 
-Complete native `prek.toml` template. Strictify uses `prek` exclusively: do not install
-or invoke a fallback hook runner, and do not create a YAML hook configuration.
-
-If the target contains `.pre-commit-config.yaml` or `.pre-commit-config.yml`, migrate its
-hooks into `prek.toml`, preserve its intent, and remove the legacy file after the native
-configuration is complete. Never leave both configurations in the repo.
-
-Run all hooks with: `uvx prek run --all-files`
-
-Install the Git hook with: `uvx prek install`
-
----
+Use `prek` exclusively. Migrate `.pre-commit-config.yaml` or
+`.pre-commit-config.yml` behavior into native `prek.toml`, verify it, then remove
+the obsolete file. Do not keep competing configs or runners.
 
 ## Placeholders
 
-| Placeholder | Example | Description |
-|---|---|---|
-| `{package_name}` | `my_project` | Importable production package directory |
-| `{python_version}` | `13` | Target Python minor version |
-
----
+Replace `{package_name}` with the production package directory and
+`{python_version}` with the target minor version, such as `13`.
 
 ## Complete template
 
-Conditional blocks are explicitly marked. Include them only when the corresponding
-strictify category fits the target repo.
-
-For category 15, read `architecture-boundaries.md` and add the selected architecture
-check after static analysis and before pytest. Use its actual installed command
-with `pass_filenames = false` and `always_run = true`; boundary changes affect
-untouched consumers. If using the bundled checker, copy its complete package and
-use the working hook entry in `architecture-toolkit.md`; that guide owns setup
-and schema details.
+Include marked conditional blocks only when applicable. For architecture checks,
+follow [boundary contracts](architecture-boundaries.md) and, if using the bundled
+checker, its [installation guide](architecture-toolkit.md). Place the installed
+command before pytest with `pass_filenames = false` and `always_run = true`.
 
 ```toml
 minimum_prek_version = "0.3.2"
@@ -179,31 +161,21 @@ pass_filenames = false
 always_run = true
 ```
 
----
-
 ## Notes for the agent
 
-1. **Replace placeholders.** Substitute `{package_name}` and `{python_version}` before
-   installing the hook.
-2. **Keep one native config.** Migrate legacy YAML behavior into `prek.toml`, then remove
-   the old file. Do not maintain parallel configurations.
-3. **Bootstrap the secrets baseline.** Run `uvx detect-secrets scan`, review every
-   finding, and save the audited `.secrets.baseline` before enabling its hook.
-4. **Check which optional tools apply.** Deptry needs trustworthy dependency
-   metadata; schema validation must not overrule the actual tools; check-sdist belongs
-   only in repos that publish a Python distribution.
-5. **Keep Vulture settings consistent.** The hook arguments override matching
-   `pyproject.toml` values. Keep them synchronized or remove the hook arguments.
-6. **Update pins deliberately.** Use `uvx prek update`, inspect the resulting changes,
-   and run the affected tools before accepting an update.
-7. **Adapt execution commands.** Replace `uv run` for non-uv repositories with the
-   target's package-manager invocation.
-8. **Monorepos need explicit scope.** Duplicate or wrap package-scoped hooks when the
-   target contains multiple importable packages.
+- Replace `uv run` for other package managers. Scope or wrap hooks for each
+  production package in a monorepo.
+- Run `uvx detect-secrets scan`, review findings, and save the audited
+  `.secrets.baseline` before enabling its hook.
+- Deptry needs reliable metadata; schema validation must support actual tool
+  settings; check-sdist requires a publishable distribution.
+- Vulture hook arguments override `pyproject.toml`; synchronize them or remove
+  the duplicate arguments.
+- Update pins with `uvx prek update`, inspect the diff, and run affected tools.
+- When replacing Strictify's `check-print-statements` and `fix-future-annotations`,
+  preserve repo-specific behavior before removing their entries and scripts.
+  Ruff owns print/logging and misplaced future imports (`F404`). Translate
+  `# allow: print-statements` to `# noqa: T201` and logging exemptions to exact
+  Ruff `G` codes.
 
-9. **Replace overlapping hooks on existing installs.** Remove Strictify's
-   `check-print-statements` and `fix-future-annotations` hook entries and their copied
-   scripts after configuring Ruff. Translate justified `# allow: print-statements`
-   exemptions to `# noqa: T201` and logging exemptions to the specific Ruff `G` code.
-   Preserve any repo-specific behavior in adapted scripts before removing them.
-   Ruff owns print/logging detection and reports misplaced future imports (`F404`).
+Verify with `uvx prek run --all-files`, then activate with `uvx prek install`.
