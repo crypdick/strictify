@@ -37,6 +37,7 @@ Scan the target repo to understand its current state. Check all of the following
 - [ ] **Domain structure** -- directories, modules, apparent layers (for architectural analysis)
 - [ ] **Architecture enforcement** -- existing ownership manifests, public APIs, dependency contracts, composition roots, exceptions/baselines, and their hooks or CI checks; trace real cross-package imports before proposing boundaries
 - [ ] **Documentation state** -- README, `docs/`, inline comments quality
+- [ ] **Release automation** -- whether the repo publishes a package, current version source, release workflow, trusted-publishing setup, and retry/concurrency behavior
 
 ## Phase 2: Propose
 
@@ -54,7 +55,7 @@ Use the Phase 1 analysis to select categories that fit the repo, and briefly exp
 ### Code Health (categories 7-10)
 
 7. **Vulture** -- dead code detection with sensible ignore list. Read `references/pyproject-strict.md` for `min_confidence` and ignore settings.
-8. **Dependency and package integrity** -- when the repo has reliable dependency metadata, add `deptry` to catch missing, unused, transitive, and misplaced development dependencies. Validate `pyproject.toml` when the configured schemas cover the selected tools, but never weaken valid tool configuration to appease a stale third-party schema. For a publishable Python distribution, add `check-sdist`; skip it for applications and non-packaged repos. For uv-managed repos, set `exclude-newer = "3 days"` in `[tool.uv]` -- a dependency cooldown that delays adoption of freshly published releases; it reduces exposure but does not establish that a dependency is safe. Read `references/pyproject-strict.md` and `references/prek-config.md` for the conditional configuration.
+8. **Dependency and package integrity** -- when the repo has reliable dependency metadata, add `deptry` to catch missing, unused, transitive, and misplaced development dependencies. Validate `pyproject.toml` when the configured schemas cover the selected tools, but never weaken valid tool configuration to appease a stale third-party schema. For a publishable Python distribution, add `check-sdist`; skip it for applications and non-packaged repos. For uv-managed repos, set `exclude-newer = "3 days"` in `[tool.uv]` -- a dependency cooldown that delays adoption of freshly published releases; it reduces exposure but does not establish that a dependency is safe. For a uv-managed distribution published from GitHub, optionally offer automatic releases after successful `main` checks; do not add release automation to applications, private libraries, or repos whose release policy is unclear. Read `references/pyproject-strict.md`, `references/prek-config.md`, and `references/automatic-releases.md` for the conditional configuration.
 9. **Pyupgrade + flynt** -- modernize syntax to the project's target Python version. Automates f-string conversion and syntax upgrades.
 10. **Structured logging** -- use Ruff as the sole detector for print/logging checks; configure print exemptions in its per-file ignores and use narrow `# noqa` comments. Detect unstructured logging patterns (string concatenation, %-formatting, f-strings in log calls) and nudge toward stdlib-compatible structured `logger.info("message", extra={"key": value})` style.
 
@@ -115,6 +116,7 @@ Install only tools needed by the approved categories. Detect the package manager
 - **Quality scorecard**: create `docs/QUALITY.md` with initial grades per module.
 - **Doc gardening**: set up stale-docs detection appropriate to project maturity; revisit the architecture overview a couple of times a year and keep executable-policy references coupled to code changes.
 - **Per-worktree**: configure if applicable (ports, DBs, caches).
+- **Automatic releases**: only when approved for a uv-managed publishable distribution, follow `references/automatic-releases.md`; preserve deliberate version bumps, update `pyproject.toml` and `uv.lock` with uv, serialize releases, reject stale runs, and verify before publishing.
 
 ## Conflict Handling
 
@@ -140,6 +142,7 @@ Detailed configs, scripts, and assets live in the skill's bundled resources. Rea
 - **`references/beartype-setup.md`** -- beartype integration guide: `beartype_this_package()` snippet, `BeartypeConf` options, common issues, and install commands per package manager
 - **`references/architecture-boundaries.md`** -- category 15: ownership, public APIs, dependency direction, composition roots, baseline ratcheting, and verification requirements for the target's selected checker
 - **`references/architecture-toolkit.md`** -- bundled checker's installation, CLI, strict schema, starter policy, baseline format, limitations, and Strictify's own worked example
+- **`references/automatic-releases.md`** -- optional main-branch release workflow for uv-managed publishable distributions, including version ownership, concurrency, retries, verification, trusted publishing, tags, and GitHub Releases
 
 ### Scripts
 

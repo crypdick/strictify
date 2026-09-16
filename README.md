@@ -42,6 +42,13 @@ codex plugin add strictify@strictify
 Codex reads the same marketplace and skill metadata; a second, duplicated plugin
 manifest is not required.
 
+## Releases
+
+Every successful push to `main` creates a plugin release commit. CI preserves a
+deliberate version increase already present in both plugin manifests; otherwise it
+increments the patch version. Superseded runs stop without overwriting newer work,
+and retries reuse an existing release commit.
+
 ## What it does
 
 Strictify includes reusable configs and instructions for changes that depend on your repo:
@@ -63,7 +70,9 @@ two runners in parallel.
 Dependency and package checks are fitted to the target: `deptry` is enabled only
 when dependency metadata is trustworthy, `pyproject.toml` schema validation is
 used only while its third-party schemas cover the selected tools, and `check-sdist`
-is reserved for publishable distributions.
+is reserved for publishable distributions. For uv-managed packages published from
+GitHub, Strictify can optionally set up an automatic main-branch release that keeps
+`pyproject.toml` and `uv.lock` synchronized before trusted publishing.
 
 Ruff remains a curated policy: Strictify does not enable `ALL`, top-level preview mode,
 or unsafe fixes. Preview lint rules are opted into by exact code so broader rule-family

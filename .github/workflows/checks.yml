@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: checks-and-release-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -16,3 +20,29 @@ jobs:
         with:
           enable-cache: false
       - run: uvx prek run --all-files
+
+  release:
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          fetch-depth: 2
+      - id: version
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: python3 tools/prepare_plugin_release.py --source "$SOURCE_SHA"
+      - if: steps.version.outputs.state == 'new'
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .claude-plugin/plugin.json .claude-plugin/marketplace.json
+          git commit --allow-empty -m "Release $RELEASE_VERSION" -m "Source-Commit: $SOURCE_SHA"
+          git push origin HEAD:main
