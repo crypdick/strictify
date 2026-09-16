@@ -35,6 +35,7 @@ Scan the target repo to understand its current state. Check all of the following
 - [ ] **Test infrastructure** -- pytest config, test directory, coverage config
 - [ ] **`__init__.py` contents** -- identify insertion point for beartype
 - [ ] **Domain structure** -- directories, modules, apparent layers (for architectural analysis)
+- [ ] **Architecture enforcement** -- existing ownership manifests, public APIs, dependency contracts, composition roots, exceptions/baselines, and their hooks or CI checks; trace real cross-package imports before proposing boundaries
 - [ ] **Documentation state** -- README, `docs/`, inline comments quality
 
 ## Phase 2: Propose
@@ -65,8 +66,8 @@ Use the Phase 1 analysis to select categories that fit the repo, and briefly exp
 ### Architecture & Organization (categories 13-16)
 
 13. **Filesystem discipline** -- limit files to 400 lines and add a hookify rule warning on `utils.py`/`helpers.py`/`misc.py` creation. Name shared utilities after what they do.
-14. **Architecture codemap** -- create `docs/ARCHITECTURE.md` to help newcomers find their way around the code. Include a paragraph explaining the problem it solves, a map of the main modules and packages and their relationships, and the architectural invariants (e.g. "the domain layer never imports Django"). Name important files, modules, and types so readers can search for them. Keep it short and avoid links to specific lines, which go stale. Every project should have this map, regardless of size. Revisit it a couple of times a year rather than on every edit.
-15. **Architectural layer enforcement** -- analyze the project's domain structure and propose dependency-direction rules. Describe each arrow explicitly as “imports”: for example, views -> services -> models when that matches the project. Do not confuse execution order (such as extract, transform, load) with allowed import dependencies. Figure out the appropriate layers for the target project, create custom lint rules enforcing valid dependency edges, and record the layers and their invariants in the `docs/ARCHITECTURE.md` codemap (category 14). Scale to project size: lightweight or no lint rules for small projects (the category-14 codemap still applies), more rigid for larger ones.
+14. **Architecture codemap** -- maintain the repo's existing architecture map, or create `docs/ARCHITECTURE.md` if none exists. Include the problem it solves, the main packages and their relationships, and architectural invariants (e.g. "the domain layer never imports Django"). Name important files, modules, and types so readers can search for them. Link to executable policy rather than duplicating its allowlists. Every project should have this short map, regardless of size. Revisit the overview a couple of times a year; update policy links and changed invariants alongside code.
+15. **Architecture boundary enforcement** -- read `references/architecture-boundaries.md` when this category fits. Derive package ownership, exact public surfaces, and allowed dependency directions from the target repo. Enforce visibility and direction independently, with named composition roots and exact, shrinking exceptions for existing debt. Prefer existing tools; add custom checks only for uncovered requirements. Include policy validation and, where shared root modules are a problem, direct-importer budgets. Use lightweight or no boundary checks for small projects; do not impose one role hierarchy or rewrite architecture merely to install enforcement.
 16. **Quality grades** -- create `docs/QUALITY.md` scorecard grading each module/domain on coverage, type safety, complexity, and test health. Assess the current state, produce initial grades, and include guidance on how to maintain and update the scorecard over time.
 
 ### Environment & Infrastructure (categories 17-18)
@@ -109,10 +110,10 @@ Install only tools needed by the approved categories. Detect the package manager
 ### Infrastructure setup
 
 - Run `prek install` to activate hooks.
-- **Architecture codemap**: create `docs/ARCHITECTURE.md` with a short problem statement, a map of the main modules and their relationships, and the architectural invariants. Name files, modules, and types so readers can search for them; avoid links to specific lines.
-- **Architectural layers**: if the project warrants it, add dependency-direction lint rules and record the layers in the codemap.
+- **Architecture codemap**: update the existing canonical map, or create `docs/ARCHITECTURE.md`. Link to the executable architecture policy and describe its intent; avoid duplicating allowlists or linking to specific source lines.
+- **Architecture boundaries**: follow `references/architecture-boundaries.md` to configure the selected checker, validate its public behavior, and wire a whole-tree check into prek and the repo's CI. Link the policy and package migration procedure from `AGENTS.md`/`CLAUDE.md`. Keep enforcement setup separate from any broader migration not already authorized.
 - **Quality scorecard**: create `docs/QUALITY.md` with initial grades per module.
-- **Doc gardening**: set up stale-docs detection appropriate to project maturity; put `docs/ARCHITECTURE.md` on a "revisit a couple times a year" cadence rather than gating every change on it.
+- **Doc gardening**: set up stale-docs detection appropriate to project maturity; revisit the architecture overview a couple of times a year and keep executable-policy references coupled to code changes.
 - **Per-worktree**: configure if applicable (ports, DBs, caches).
 
 ## Conflict Handling
@@ -137,6 +138,7 @@ Detailed configs, scripts, and assets live in the skill's bundled resources. Rea
 - **`references/pyproject-strict.md`** -- strict tool configurations for ruff, mypy, pytest, coverage, vulture, and conditional deptry sections in pyproject.toml
 - **`references/prek-config.md`** -- complete native `prek.toml` template with built-in, remote, conditional integrity, and local hook definitions
 - **`references/beartype-setup.md`** -- beartype integration guide: `beartype_this_package()` snippet, `BeartypeConf` options, common issues, and install commands per package manager
+- **`references/architecture-boundaries.md`** -- category 15: ownership, public APIs, dependency direction, composition roots, baseline ratcheting, and verification requirements for the target's selected checker
 
 ### Scripts
 

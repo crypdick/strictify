@@ -30,8 +30,10 @@ The command is a thin entry point; all logic lives in the skill.
   the plugin manifests all quote "22 categories" and must stay in sync.
 - **`references/`** — the configs the agent merges into a target repo:
   `pyproject-strict.md` (ruff/mypy/pytest/coverage/vulture/deptry), `prek-config.md`
-  (the native `prek.toml` template), and `beartype-setup.md`. Each explains when
-  and how to adapt its settings.
+  (the native `prek.toml` template), and `beartype-setup.md`. The
+  `architecture-boundaries.md` reference specifies package ownership, independent
+  visibility/direction gates, composition roots, and shrinking baselines for a
+  repo-selected checker. Each reference explains when and how to adapt its policy.
 - **`scripts/`** — custom prek hook scripts copied into the target repo's
   `scripts/prek_hooks/`: `check_exception_handling.py`,
   `check_file_length.py`, `check_timeless_comments.py`, and
