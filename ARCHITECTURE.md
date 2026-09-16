@@ -15,6 +15,14 @@ into the target repo. Claude Code also reads the bundled hookify rules.
 Claude Code or Codex. These two files must agree on name and version. No behavior
 lives here.
 
+### `.github/workflows/` and `tools/`
+
+`checks.yml` runs the repository gate for every push and pull request. After a
+successful push to `main`, `tools/prepare_plugin_release.py` preserves a deliberate
+manifest bump or increments the patch version in both plugin manifests, then CI
+commits the release. Source-commit metadata makes retries idempotent; stale runs do
+not overwrite newer pushes.
+
 ### `commands/strictify.md`
 
 The `/strictify` slash command. Its front-matter gathers context (directory listing,
@@ -75,6 +83,8 @@ The command is a thin entry point; all logic lives in the skill.
   the hook lifecycle.
 - **Category count is a shared constant.** The "22 categories" figure appears in the
   skill, the README, and both manifests. Changing the set means updating all four.
+- **Plugin versions move together.** Automatic releases update both JSON manifests
+  after checks pass. A manual version change is allowed but must update both files.
 
 ## Repository boundary enforcement
 
