@@ -146,5 +146,5 @@ outside configured roots does not. Deliberately scope generated or vendored code
 ## Strictify as the worked example
 
 Strictify uses this package through `python -m skills.strictify.scripts.architecture.api`.
-Its [architecture map](../../../ARCHITECTURE.md#repository-boundary-enforcement)
+Its [architecture map](https://github.com/crypdick/strictify/blob/main/ARCHITECTURE.md#repository-boundary-enforcement)
 explains the repo policy, standalone constraints, and tests.
