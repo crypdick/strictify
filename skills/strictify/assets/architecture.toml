@@ -1,0 +1,49 @@
+# Starter, not a universal architecture. Rename units and roles after tracing imports.
+version = 2
+source_roots = [
+  {path = "src/app", module = "app"},
+  {path = "scripts/prek_hooks/architecture", module = "scripts.prek_hooks.architecture"},
+  {path = "tests", module = "tests"},
+]
+composition_roots = ["app.cli"]
+check_package_cycles = true
+
+[roles.core]
+allowed_dependencies = []
+[roles.caller]
+allowed_dependencies = ["core"]
+[roles.tool]
+allowed_dependencies = []
+[roles.test]
+allowed_dependencies = ["core", "caller", "tool"]
+
+[[packages]]
+name = "namespace"
+root = "app"
+role = "core"
+public_modules = []
+include_descendants = false
+
+[[packages]]
+name = "core"
+root = "app.core"
+role = "core"
+public_modules = ["app.core.api"]
+
+[[packages]]
+name = "cli"
+root = "app.cli"
+role = "caller"
+public_modules = []
+
+[[packages]]
+name = "architecture_toolkit"
+root = "scripts.prek_hooks.architecture"
+role = "tool"
+public_modules = ["scripts.prek_hooks.architecture.api"]
+
+[[packages]]
+name = "tests"
+root = "tests"
+role = "test"
+public_modules = []

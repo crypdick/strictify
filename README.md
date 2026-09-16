@@ -47,7 +47,8 @@ manifest is not required.
 Strictify includes reusable configs and instructions for changes that depend on your repo:
 
 - Ruff, mypy, pytest, and coverage settings; a native `prek.toml` template; and self-contained hook scripts.
-- Instructions for the agent to enforce package ownership, public APIs, and dependency direction, set up services, and isolate worktrees based on your repo's needs.
+- A reusable [architecture toolkit and setup guide](skills/strictify/references/architecture-toolkit.md), with [starter architecture.toml](skills/strictify/assets/architecture.toml), exact public APIs, independent dependency gates, and a shrinking reviewed baseline.
+- Instructions to set up services and isolate worktrees based on your repo's needs.
 
 `/strictify` runs a three-phase workflow:
 
@@ -139,8 +140,8 @@ uv run --no-project --with ruff==0.15.20 python -m unittest discover -s tests
 
 Run all repository checks with `uvx prek run --all-files`; enable commit checks
 with `uvx prek install`. CI runs the same suite. The repository's
-[architecture policy](architecture.toml) registers Python sources and keeps hooks
-independent and stdlib-only. See [architecture enforcement](ARCHITECTURE.md#repository-boundary-enforcement)
+[architecture policy](architecture.toml) uses the same shipped toolkit as target
+repositories, and keeps single-file hooks independent and stdlib-only. See [architecture enforcement](ARCHITECTURE.md#repository-boundary-enforcement)
 for scope, exceptions, and tests. Repository checks require Python 3.11 or newer
 and Git.
 

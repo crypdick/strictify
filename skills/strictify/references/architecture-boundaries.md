@@ -3,8 +3,10 @@
 Use for category 15 when a Python repo has meaningful package boundaries and
 cross-package consumers. Choose roles, public API conventions, and strictness from
 the repo's actual responsibilities. Small programs may need only a documented
-import invariant. This reference specifies enforcement behavior; it does not ship
-an architecture checker or prescribe one universal layer hierarchy.
+import invariant. This reference specifies enforcement behavior without prescribing
+one universal layer hierarchy. The bundled [architecture toolkit](architecture-toolkit.md)
+provides a configurable `architecture.toml` checker, starter policy, setup steps,
+schema, and baseline format when the target has no equivalent enforcement.
 
 ## Choose one executable policy
 
@@ -13,8 +15,8 @@ Trace representative callers through their public APIs to concrete dependencies.
 Execution order is not import direction: label an arrow `A imports B` explicitly.
 
 Reuse a checker already in the repo when it can express the required contracts.
-Otherwise evaluate an established dependency-boundary tool before writing custom
-AST checks. Verify the chosen tool's behavior against the cases below; a banned
+Otherwise evaluate established dependency-boundary tools and the bundled toolkit
+before writing another checker. Verify the chosen tool's behavior against the cases below; a banned
 import list alone does not establish package ownership or public API visibility.
 Add only checks for gaps, with each invariant owned by one checker.
 

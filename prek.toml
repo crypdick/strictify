@@ -38,7 +38,7 @@ hooks = [
     {id = "ruff-check", name = "Ruff check", entry = "ruff check --config ruff.toml --fix --quiet", language = "python", additional_dependencies = ["ruff==0.15.20"], files = "^(skills/strictify/scripts|tests|tools)/", types = ["python"]},
     {id = "ruff-format", name = "Ruff format", entry = "ruff format --config ruff.toml --quiet", language = "python", additional_dependencies = ["ruff==0.15.20"], files = "^(skills/strictify/scripts|tests|tools)/", types = ["python"]},
     {id = "mypy", name = "mypy", entry = "mypy --config-file mypy.ini", language = "python", additional_dependencies = ["mypy==1.17.0"], files = "^(skills/strictify/scripts|tools)/", types = ["python"]},
-    {id = "check-architecture", name = "Check standalone script boundaries", entry = "python tools/check_architecture.py", language = "python", pass_filenames = false, always_run = true},
+    {id = "check-architecture", name = "Check architecture boundaries", entry = "python -m skills.strictify.scripts.architecture.api", language = "python", pass_filenames = false, always_run = true},
     {id = "unit-tests", name = "Hook script unit tests", entry = "python -m unittest discover -s tests", language = "python", additional_dependencies = ["ruff==0.15.20"], pass_filenames = false, always_run = true},
     {id = "check-category-count", name = "Check category count consistency", entry = "python3 tools/check_category_count.py", language = "system", pass_filenames = false, always_run = true},
 ]

@@ -1,19 +1,78 @@
-version = 1
-
-# Each hook is distributed as one independent script. Repo tools and tests also
-# use only static stdlib imports; tests exercise hooks via CLI or the loader below.
-[sources]
-"skills/strictify/scripts/check_exception_handling.py" = "hook"
-"skills/strictify/scripts/check_file_length.py" = "hook"
-"skills/strictify/scripts/check_private_test_imports.py" = "hook"
-"skills/strictify/scripts/check_timeless_comments.py" = "hook"
-"tools/check_architecture.py" = "tool"
-"tools/check_category_count.py" = "tool"
-"tests/__init__.py" = "test"
-"tests/test_architecture.py" = "test"
-"tests/test_hook_cli.py" = "test"
-"tests/test_hook_scripts.py" = "test"
-"tests/test_shipped_policy.py" = "test"
+version = 2
+# Same shipped toolkit used by target repositories, with no application layers.
+source_roots = [{ path = ".", module = "" }]
+stdlib_only = true
+check_package_cycles = true
+standalone_modules = [
+  "skills.strictify.scripts.check_exception_handling",
+  "skills.strictify.scripts.check_file_length",
+  "skills.strictify.scripts.check_private_test_imports",
+  "skills.strictify.scripts.check_timeless_comments",
+  "tools.check_category_count",
+  "tests",
+  "tests.test_architecture",
+  "tests.test_hook_cli",
+  "tests.test_hook_scripts",
+  "tests.test_shipped_policy",
+]
 
 [dynamic_loading]
-"tests/test_hook_scripts.py" = "Load standalone hooks by source path to exercise their public functions."
+"tests.test_hook_scripts" = "Load standalone hooks by source path to exercise public functions."
+
+[roles.hook]
+allowed_dependencies = []
+[roles.toolkit]
+allowed_dependencies = []
+[roles.tool]
+allowed_dependencies = []
+[roles.test]
+allowed_dependencies = []
+
+[[packages]]
+name = "exception_hook"
+root = "skills.strictify.scripts.check_exception_handling"
+role = "hook"
+public_modules = []
+include_descendants = false
+
+[[packages]]
+name = "file_length_hook"
+root = "skills.strictify.scripts.check_file_length"
+role = "hook"
+public_modules = []
+include_descendants = false
+
+[[packages]]
+name = "private_test_hook"
+root = "skills.strictify.scripts.check_private_test_imports"
+role = "hook"
+public_modules = []
+include_descendants = false
+
+[[packages]]
+name = "timeless_hook"
+root = "skills.strictify.scripts.check_timeless_comments"
+role = "hook"
+public_modules = []
+include_descendants = false
+
+[[packages]]
+name = "architecture_toolkit"
+root = "skills.strictify.scripts.architecture"
+role = "toolkit"
+public_modules = ["skills.strictify.scripts.architecture.api"]
+include_descendants = true
+
+[[packages]]
+name = "category_check"
+root = "tools.check_category_count"
+role = "tool"
+public_modules = []
+include_descendants = false
+
+[[packages]]
+name = "tests"
+root = "tests"
+role = "test"
+public_modules = []
+include_descendants = true

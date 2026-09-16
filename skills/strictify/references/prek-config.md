@@ -30,7 +30,9 @@ strictify category fits the target repo.
 For category 15, read `architecture-boundaries.md` and add the selected architecture
 check after static analysis and before pytest. Use its actual installed command
 with `pass_filenames = false` and `always_run = true`; boundary changes affect
-untouched consumers. The template does not assume a bundled architecture checker.
+untouched consumers. If using the bundled checker, copy its complete package and
+use the working hook entry in `architecture-toolkit.md`; that guide owns setup
+and schema details.
 
 ```toml
 minimum_prek_version = "0.3.2"
