@@ -27,6 +27,11 @@ Install the Git hook with: `uvx prek install`
 Conditional blocks are explicitly marked. Include them only when the corresponding
 strictify category fits the target repo.
 
+For category 15, read `architecture-boundaries.md` and add the selected architecture
+check after static analysis and before pytest. Use its actual installed command
+with `pass_filenames = false` and `always_run = true`; boundary changes affect
+untouched consumers. The template does not assume a bundled architecture checker.
+
 ```toml
 minimum_prek_version = "0.3.2"
 default_language_version.python = "python3"

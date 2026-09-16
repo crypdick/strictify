@@ -47,7 +47,7 @@ manifest is not required.
 Strictify includes reusable configs and instructions for changes that depend on your repo:
 
 - Ruff, mypy, pytest, and coverage settings; a native `prek.toml` template; and self-contained hook scripts.
-- Instructions for the agent to choose architectural layers, set up services, and isolate worktrees based on your repo's needs.
+- Instructions for the agent to enforce package ownership, public APIs, and dependency direction, set up services, and isolate worktrees based on your repo's needs.
 
 `/strictify` runs a three-phase workflow:
 
@@ -75,7 +75,7 @@ selections cannot silently acquire new preview checks.
 | **Static Analysis & Type Safety** | Prek hook framework, Ruff anti-slop rules, mypy strict, Beartype, Semantic typing (NewType), Parse-don't-validate |
 | **Code Health** | Vulture (dead code), Dependency/package integrity, Pyupgrade + Flynt, Structured logging |
 | **Testing & Coverage** | Branch coverage with `fail_under=100`, Fast tests (xdist, timeouts, --failed-first), Red/green TDD agent directive |
-| **Architecture & Organization** | File length limits, Architecture codemap (ARCHITECTURE.md), Architectural layers, Quality scorecard |
+| **Architecture & Organization** | File length limits, Architecture codemap (ARCHITECTURE.md), Architecture boundaries, Quality scorecard |
 | **Environment & Infrastructure** | Ephemeral environments, Per-worktree isolation |
 | **Ongoing Enforcement** | Custom hooks, Hygiene hooks, Doc gardening, Taste enforcer |
 
@@ -137,7 +137,12 @@ Run the regression suite with its pinned Ruff dependency:
 uv run --no-project --with ruff==0.15.20 python -m unittest discover -s tests
 ```
 
-Run all repository checks with `uvx prek run --all-files`.
+Run all repository checks with `uvx prek run --all-files`; enable commit checks
+with `uvx prek install`. CI runs the same suite. The repository's
+[architecture policy](architecture.toml) registers Python sources and keeps hooks
+independent and stdlib-only. See [architecture enforcement](ARCHITECTURE.md#repository-boundary-enforcement)
+for scope, exceptions, and tests. Repository checks require Python 3.11 or newer
+and Git.
 
 ## License
 

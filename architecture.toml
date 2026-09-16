@@ -1,0 +1,19 @@
+version = 1
+
+# Each hook is distributed as one independent script. Repo tools and tests also
+# use only static stdlib imports; tests exercise hooks via CLI or the loader below.
+[sources]
+"skills/strictify/scripts/check_exception_handling.py" = "hook"
+"skills/strictify/scripts/check_file_length.py" = "hook"
+"skills/strictify/scripts/check_private_test_imports.py" = "hook"
+"skills/strictify/scripts/check_timeless_comments.py" = "hook"
+"tools/check_architecture.py" = "tool"
+"tools/check_category_count.py" = "tool"
+"tests/__init__.py" = "test"
+"tests/test_architecture.py" = "test"
+"tests/test_hook_cli.py" = "test"
+"tests/test_hook_scripts.py" = "test"
+"tests/test_shipped_policy.py" = "test"
+
+[dynamic_loading]
+"tests/test_hook_scripts.py" = "Load standalone hooks by source path to exercise their public functions."
