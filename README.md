@@ -34,6 +34,14 @@ dead code and dependencies, tests and coverage, architecture boundaries,
 worktree isolation, and ongoing enforcement. It merges existing settings and
 installs approved tools and configures hooks through `prek`.
 
+The plugin also ships [coding-conventions](skills/coding-conventions/SKILL.md)
+for advisory reviews of module naming, semantic types, boundary parsing, and
+durable preferences. Ask it to review code or establish project conventions.
+For guidance across ordinary coding tasks, keep conventions linked from project
+agent instructions. Neither skill requires Hookify. See
+[advisory migration](skills/strictify/references/advisory-migration.md) when
+replacing existing reminders.
+
 ## License
 
 MIT
