@@ -1,30 +1,4 @@
-# Design Conventions
-
-> Adapt this template into root `CONVENTIONS.md`: keep applicable principles, use
-> repo types in examples, and add local conventions. Link it from agent instructions.
-
-## Composition over inheritance
-
-Combine focused components when feature variants multiply subclasses or boolean
-flags. For example, let a report render sections rather than encoding every
-combination in subclasses:
-
-```python
-from typing import Protocol
-
-class Renderable(Protocol):
-    def render(self) -> str: ...
-
-class Report:
-    def __init__(self, sections: list[Renderable]):
-        self.sections = sections
-
-    def render(self) -> str:
-        return "\n\n".join(section.render() for section in self.sections)
-```
-
-Inject a strategy for behavior that varies. Inheritance still fits framework base
-classes, `Enum`, `Exception`, and is-a relationships without combinatorial variants.
+# Types and boundaries
 
 ## Parse, don't validate
 
@@ -64,16 +38,3 @@ adding a distinct static type; `TypeAlias` only supplies another name.
 
 Apply this to meaningful IDs, amounts, slugs, tokens, emails, URLs, and paths.
 Leave generic counters and buffer sizes as primitives.
-
-## Keep code and its documentation coupled
-
-Where docs repeat a code value, add a back-pointer at its definition:
-
-```python
-# NOTE: Update docs/security.md § Credential Handling if you change this list.
-allowed_vars = ["PATH", "HOME", "USER"]
-```
-
-Update linked docs with code changes. When editing prose lists or tables, check
-whether the corresponding code needs a pointer. Skip this where no published
-docs duplicate code values or drift would not mislead readers.

@@ -109,7 +109,7 @@ class ShippedPolicyTests(unittest.TestCase):
         self.assertIn("`uv add beartype`", skill)
 
     def test_documented_boundary_rejects_invalid_input(self) -> None:
-        document = (SKILL / "assets/CONVENTIONS.md-EXAMPLE").read_text()
+        document = (ROOT / "skills/coding-conventions/references/types-and-boundaries.md").read_text()
         section = document.split("## Parse, don't validate", 1)[1]
         example = re.findall(r"```python\n(.*?)```", section, re.DOTALL)[0]
         path = self.root / "boundary.py"
@@ -133,19 +133,3 @@ for value in ({}, {"user_id": 123}, {"user_id": ""}, None, []):
             check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-
-    def test_junk_drawer_rule_matches_whole_filenames(self) -> None:
-        rule = (SKILL / "assets/hookify.no-junk-drawers.md").read_text(encoding="utf-8")
-        pattern = re.search(r"^    pattern: (.+)$", rule, re.MULTILINE)
-        if pattern is None:
-            self.fail("Missing filename pattern")
-        for filename, expected in (
-            ("utils.py", True),
-            ("app/helpers.py", True),
-            (r"app\misc.py", True),
-            ("app/path_utils.py", False),
-            ("app/uncommon.py", False),
-            ("utils.py.backup", False),
-        ):
-            with self.subTest(filename=filename):
-                self.assertEqual(bool(re.search(pattern[1], filename)), expected)

@@ -10,7 +10,7 @@
     {
       "name": "strictify",
       "source": "./",
-      "description": "Add Python code quality checks to a repo. Reviews existing config, proposes changes across 22 categories, and installs hookify rules to capture coding preferences.",
+      "description": "Set up Python code quality checks across 22 categories and review code design with the coding-conventions skill.",
       "version": "0.8.3"
     }
   ]

@@ -1,9 +1,10 @@
 # Architecture
 
 Strictify ships Python enforcement instructions and assets for Claude Code and
-Codex. Both hosts use `.claude-plugin` metadata and `skills/strictify/SKILL.md`.
+Codex. Both hosts use `.claude-plugin` metadata and the skills under `skills/`.
 The agent analyzes a target repo, proposes changes, and applies approved categories.
-Claude Code also uses the hookify rules.
+The sibling coding-conventions skill owns advisory design guidance. Linked project
+conventions provide persistent guidance for both hosts; neither skill installs Hookify.
 
 ## Codemap
 
@@ -32,10 +33,19 @@ invokes the skill.
   architecture contracts, and toolkit setup/schema.
 - `scripts/`: four standalone hooks plus the `architecture/` package. Its public
   `api.py` exposes the CLI/API; implementation modules remain private.
-- `assets/`: starter architecture policy, hookify rules, TDD directive, and the
-  conventions template. Hookify rules and the directive go in `.claude/`.
-  Adapt `CONVENTIONS.md-EXAMPLE` into root `CONVENTIONS.md` and link it from agent
-  instructions. It holds principles that require code review to apply.
+- `assets/`: starter architecture policy and TDD directive. The directive goes
+  in `.claude/`.
+- [Advisory migration](skills/strictify/references/advisory-migration.md) owns
+  replacement of Hookify reminders and the limits of i-insist integration.
+
+### `skills/coding-conventions/`
+
+`SKILL.md` provides the review and convention-documentation workflow.
+References separate module structure, types and boundaries, change workflow,
+and preferences and documentation. The skill routes to relevant topics without
+loading every guide. Strictify uses these guides for its advisory categories
+rather than maintaining another copy.
+The documented boundary parser is exercised by `tests/test_shipped_policy.py`.
 
 ## Invariants
 
