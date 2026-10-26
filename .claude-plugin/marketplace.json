@@ -11,7 +11,7 @@
       "name": "strictify",
       "source": "./",
       "description": "Set up Python code quality checks across 22 categories and review code design with the coding-conventions skill.",
-      "version": "0.8.3"
+      "version": "0.8.4"
     }
   ]
 }
