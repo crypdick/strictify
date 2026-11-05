@@ -57,11 +57,12 @@ class PreparePluginReleaseTests(unittest.TestCase):
         self.git("commit", "--no-verify", "--quiet", "-m", message)
         return self.git("rev-parse", "HEAD")
 
-    def run_tool(self, source: str) -> subprocess.CompletedProcess[str]:
+    def run_tool(self, source: str, previous: str | None = None) -> subprocess.CompletedProcess[str]:
         output = self.root / "github-output"
         output.unlink(missing_ok=True)
+        previous = previous or self.git("rev-parse", f"{source}^")
         return subprocess.run(  # noqa: S603 -- repository tool and test-controlled SHA.
-            [sys.executable, "prepare_plugin_release.py", "--source", source],
+            [sys.executable, "prepare_plugin_release.py", "--source", source, "--previous", previous],
             cwd=self.root,
             env={**os.environ, "GITHUB_OUTPUT": str(output)},
             capture_output=True,
@@ -105,16 +106,29 @@ class PreparePluginReleaseTests(unittest.TestCase):
         self.assertEqual(self.versions(), ("0.9.0", "0.9.0"))
         self.assertEqual(self.output(), "state=new\nversion=0.9.0\n")
 
-    def test_manifest_versions_must_agree(self) -> None:
+    def test_manual_bump_syncs_marketplace(self) -> None:
         self.write_versions("0.8.0")
         self.commit("base")
-        self.write_versions("0.8.0", "0.8.1")
-        source = self.commit("mismatched versions")
+        self.write_versions("0.9.0", "0.8.0")
+        source = self.commit("manual plugin version")
 
         result = self.run_tool(source)
 
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("plugin manifests disagree", result.stderr)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.versions(), ("0.9.0", "0.9.0"))
+
+    def test_manual_bump_in_earlier_push_commit_is_preserved(self) -> None:
+        self.write_versions("0.8.0")
+        previous = self.commit("base")
+        self.write_versions("0.9.0")
+        self.commit("manual minor release")
+        (self.root / "feature.txt").write_text("change\n", encoding="utf-8")
+        source = self.commit("feature")
+
+        result = self.run_tool(source, previous)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.versions(), ("0.9.0", "0.9.0"))
 
     def test_version_cannot_decrease(self) -> None:
         self.write_versions("0.8.0")
@@ -147,11 +161,23 @@ class PreparePluginReleaseTests(unittest.TestCase):
         (self.root / "newer.txt").write_text("newer\n", encoding="utf-8")
         self.commit("newer source")
 
-        result = self.run_tool(source)
+        result = self.run_tool(source, source)
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.versions(), ("0.8.0", "0.8.0"))
         self.assertEqual(self.output(), "state=stale\nversion=0.8.0\n")
+
+    def test_invalid_previous_sha_is_rejected(self) -> None:
+        self.write_versions("0.8.0")
+        self.commit("base")
+        (self.root / "feature.txt").write_text("change\n", encoding="utf-8")
+        source = self.commit("feature")
+
+        result = self.run_tool(source, "HEAD")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("previous must be a full Git commit SHA", result.stderr)
+        self.assertEqual(self.versions(), ("0.8.0", "0.8.0"))
 
 
 if __name__ == "__main__":
