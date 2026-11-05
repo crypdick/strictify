@@ -17,7 +17,10 @@ Their names and versions must match.
 
 `checks.yml` runs the full gate on pushes and pull requests. After a successful
 push to `main`, `tools/prepare_plugin_release.py` preserves a deliberate version
-increase or bumps both manifests' patch version. CI commits the release.
+increase in `.claude-plugin/plugin.json` or bumps its patch version, then
+synchronizes the marketplace. Version comparison uses the branch HEAD before the
+whole push, so a manual bump in an earlier pushed commit is preserved. CI checks
+the synchronized release before committing it.
 Source-commit metadata supports retries; stale runs cannot overwrite newer pushes.
 `tools/check_category_count.py` checks documented counts against the skill's list.
 
@@ -60,7 +63,7 @@ The documented boundary parser is exercised by `tests/test_shipped_policy.py`.
 - Merge target config without weakening user settings. For a legacy YAML hook
   migration, preserve behavior, verify native `prek.toml`, then remove the old file.
 - The skill, README, and both manifests must agree on the category count.
-  Both manifests must also agree on versions, including manual bumps.
+  CI synchronizes both manifests' versions from `.claude-plugin/plugin.json`.
 
 ## Repository boundary enforcement
 
