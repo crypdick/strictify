@@ -1,10 +1,10 @@
 # Run with:      uvx prek run --all-files
 # Install hooks: uvx prek install
 #
-# Most of strictify's 22 categories don't apply to this plugin repo, which has
+# Most of strictify's categories don't apply to this plugin repo, which has
 # no Python package or runtime. These checks cover repo hygiene, Ruff and mypy
 # for the bundled hook scripts, unittest/Ruff regressions, architecture boundaries,
-# and category count consistency. See ARCHITECTURE.md.
+# and plugin manifest identity. See ARCHITECTURE.md.
 
 minimum_prek_version = "0.3.2"
 default_language_version.python = "python3"
@@ -39,6 +39,6 @@ hooks = [
     {id = "ruff-format", name = "Ruff format", entry = "ruff format --config ruff.toml --quiet", language = "python", additional_dependencies = ["ruff==0.15.20"], files = "^(skills/strictify/scripts|tests|tools)/", types = ["python"]},
     {id = "mypy", name = "mypy", entry = "mypy --config-file mypy.ini", language = "python", additional_dependencies = ["mypy==1.17.0"], files = "^(skills/strictify/scripts|tools)/", types = ["python"]},
     {id = "check-architecture", name = "Check architecture boundaries", entry = "python -m skills.strictify.scripts.architecture.api", language = "python", pass_filenames = false, always_run = true},
-    {id = "unit-tests", name = "Hook script unit tests", entry = "python -m unittest discover -s tests", language = "python", additional_dependencies = ["ruff==0.15.20"], pass_filenames = false, always_run = true},
-    {id = "check-category-count", name = "Check category count consistency", entry = "python3 tools/check_category_count.py", language = "system", pass_filenames = false, always_run = true},
+    {id = "unit-tests", name = "Hook script unit tests", entry = "python -m unittest discover -s tests", language = "python", additional_dependencies = ["ruff==0.15.20", "mypy==1.17.0"], pass_filenames = false, always_run = true},
+    {id = "check-plugin-manifests", name = "Check plugin manifest identity", entry = "python tools/prepare_plugin_release.py --check", language = "python", pass_filenames = false, always_run = true},
 ]

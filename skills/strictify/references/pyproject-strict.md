@@ -175,9 +175,6 @@ warn_return_any = true
 warn_unused_configs = true
 show_error_codes = true
 pretty = true
-
-# Pragmatic exceptions -- agent should adjust based on target project's frameworks
-disable_error_code = ["no-untyped-call", "no-untyped-def"]
 ```
 
 ### Test file overrides

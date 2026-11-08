@@ -8,6 +8,10 @@ the obsolete file. Do not keep competing configs or runners.
 
 Replace `{package_name}` with the production package directory and
 `{python_version}` with the target minor version, such as `13`.
+Replace `{import_package}` with a reviewed top-level first-party import name,
+not a filesystem path. Repeat `--package NAME` for every first-party name,
+including namespace packages and separate runtimes. For repos without Python
+application code, omit the private-import hook rather than inventing a package.
 
 ## Complete template
 
@@ -148,7 +152,7 @@ types = ["python"]
 [[repos.hooks]]
 id = "check-private-test-imports"
 name = "Forbid private imports in tests"
-entry = "python scripts/prek_hooks/check_private_test_imports.py"
+entry = "python scripts/prek_hooks/check_private_test_imports.py --package {import_package}"
 language = "system"
 types = ["python"]
 

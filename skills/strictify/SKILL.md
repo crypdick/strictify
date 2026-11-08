@@ -5,7 +5,7 @@ description: Add Python code quality enforcement when asked to strictify a repo,
 
 # Strictify
 
-Analyze the repo, propose relevant changes across 22 categories, and apply only
+Analyze the repo, propose relevant changes across the categories below, and apply only
 approved changes. Fit strict defaults to the project's needs. Preserve existing
 settings unless replacing them through a verified migration.
 
@@ -17,7 +17,7 @@ current gaps and proposed changes; explain consequential trade-offs and skipped
 categories. Let the user veto any category. Read linked references when configuring
 the corresponding tools.
 
-### Static analysis and type safety (categories 1-6)
+### Static analysis and type safety
 
 1. **Prek hook framework:** Use native `prek.toml` exclusively. Follow the
    [template and migration instructions](references/prek-config.md).
@@ -34,7 +34,7 @@ the corresponding tools.
 6. **Parse-don't-validate:** Use coding-conventions to document boundary parsing
    into validated types. Adopt the project's existing validation approach.
 
-### Code health (categories 7-10)
+### Code health
 
 7. **Vulture:** Configure dead-code detection and framework exceptions from the
    pyproject reference.
@@ -48,7 +48,7 @@ the corresponding tools.
 10. **Structured logging:** Let Ruff own print/logging checks and exemptions.
     Prefer `logger.info("message", extra={"key": value})` to formatted log strings.
 
-### Testing and coverage (categories 11-12)
+### Testing and coverage
 
 11. **Coverage enforcement:** Collect branch coverage for the actual package,
     target `fail_under = 100`, and report missing lines. Follow the pyproject
@@ -59,7 +59,7 @@ the corresponding tools.
     Pair recordings with a CI run against live services after PR approval;
     recordings assume responses depend only on the request, which live runs must check.
 
-### Architecture and organization (categories 13-16)
+### Architecture and organization
 
 13. **Filesystem discipline:** Limit files to 400 code-containing physical lines. Use
     coding-conventions for module naming and ownership guidance.
@@ -76,7 +76,7 @@ the corresponding tools.
     gaps and maintenance priorities. Prefer existing tool reports over duplicate
     scorekeeping.
 
-### Environment and infrastructure (categories 17-18)
+### Environment and infrastructure
 
 17. **Ephemeral environment:** Make a fresh worktree ready to use with one command,
     including required local config, dependencies, and services. Reuse existing setup.
@@ -84,7 +84,7 @@ the corresponding tools.
     worktrees; derive names or ports from the worktree where useful. Share
     content-addressed uv/pip caches. Stateless projects may only need `uv run`.
 
-### Ongoing enforcement (categories 19-22)
+### Ongoing enforcement
 
 19. **Custom hooks:** Install exception-handling, timeless-comment, and private-test-import
     checks from the scripts below. Copy the behavior-testing directive from assets.
@@ -121,15 +121,19 @@ Copy the four standalone, stdlib-only hooks to `scripts/prek_hooks/`:
 |---|---|
 | `scripts/check_exception_handling.py` | Bare `except:` or broad handlers without a direct raise or recognized logging call |
 | `scripts/check_file_length.py` | More than 400 physical lines containing code, including continuation lines |
-| `scripts/check_timeless_comments.py` | Temporal terms in comments/docstrings; permits TODO/FIXME and explicit exemptions |
+| `scripts/check_timeless_comments.py` | Explicit historical phrases in comments/docstrings; permits TODO/FIXME and explicit exemptions |
 | `scripts/check_private_test_imports.py` | Absolute `from` imports of private first-party symbols in tests; excludes relative test-helper imports |
 
-Hooks accept filenames, emit `{file}:{line}: {message} -- {remediation}`, and exit
+Hooks accept filenames, emit a file/line location, message, and remediation, and exit
 nonzero on violations. Use `# allow: {hook-name}` on the relevant line, or in the
 first five lines for file length. Ruff must run alongside them for syntax and
 encoding errors. Logger detection recognizes `logging`, `log`, `logger`, and
 `*_logger` names without resolving imports or proving control flow. Private-import
-checks detect flat modules/packages; pass `--package` for namespace or other layouts.
+checks auto-detect conventional flat modules/packages for standalone use. In installed
+hooks, pass explicit `--package NAME` arguments from the reviewed first-party inventory,
+including namespace packages; verify a forbidden import fails under the installed command.
+Timeless-comment vocabulary such as `fallback` and `compatible` requires advisory
+judgment, not a blocking word ban.
 
 Copy `scripts/architecture/` as a complete package, including `LICENSE`, following
 its guide. Run its public `api` module over configured roots; use reviewed policy

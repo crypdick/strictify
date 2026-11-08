@@ -152,12 +152,21 @@ class HookCliTests(unittest.TestCase):
 
     def test_timeless_exemption_cannot_be_a_code_string(self) -> None:
         result = self.run_hook(
-            "timeless_comments", 'MARKER = "# allow: timeless-comments"  # legacy behavior\n'
+            "timeless_comments", 'MARKER = "# allow: timeless-comments"  # previously retried\n'
         )
         self.assertEqual(result.returncode, 1)
 
     def test_timeless_task_markers_are_words(self) -> None:
-        self.assertEqual(self.run_hook("timeless_comments", "# old todoscope\n").returncode, 1)
+        self.assertEqual(self.run_hook("timeless_comments", "# previously retried todoscope\n").returncode, 1)
+
+    def test_timeless_comments_allow_current_domain_behavior(self) -> None:
+        source = '# Route to fallback provider when primary unavailable.\n# Buffer is used to hold pending work.\n"""Protocol-compatible implementation."""\n# Switch unused slots to the new owner.\n'
+        self.assertEqual(self.run_hook("timeless_comments", source).returncode, 0)
+
+    def test_timeless_docstrings_use_physical_line_numbers(self) -> None:
+        result = self.run_hook("timeless_comments", '"""Current API.\u2028Previously retried."""\n')
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("sample.py:1:", result.stdout)
 
     def test_missing_files_are_ignored(self) -> None:
         for hook in ("exception_handling", "file_length", "private_test_imports", "timeless_comments"):

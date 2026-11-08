@@ -11,7 +11,8 @@ conventions provide persistent guidance for both hosts; neither skill installs H
 ### `.claude-plugin/`
 
 `plugin.json` declares the plugin; `marketplace.json` makes it installable.
-Their names and versions must match.
+Their names must be `strictify`, with exactly one matching marketplace registration.
+Versions are synchronized on release; a deliberate plugin-only bump may await release.
 
 ### `.github/workflows/` and `tools/`
 
@@ -22,7 +23,7 @@ synchronizes the marketplace. Version comparison uses the branch HEAD before the
 whole push, so a manual bump in an earlier pushed commit is preserved. CI checks
 the synchronized release before committing it.
 Source-commit metadata supports retries; stale runs cannot overwrite newer pushes.
-`tools/check_category_count.py` checks documented counts against the skill's list.
+The full gate uses the same tool's read-only `--check` to validate manifest identity.
 
 ### `commands/strictify.md`
 
@@ -31,7 +32,7 @@ invokes the skill.
 
 ### `skills/strictify/`
 
-- `SKILL.md`: 22 categories and the analyze/propose/apply workflow.
+- `SKILL.md`: categories and the analyze/propose/apply workflow.
 - `references/`: tool configs, Beartype integration, conditional releases,
   architecture contracts, and toolkit setup/schema.
 - `scripts/`: four standalone hooks plus the `architecture/` package. Its public
@@ -56,14 +57,13 @@ The documented boundary parser is exercised by `tests/test_shipped_policy.py`.
   assets into target repos, where the configured tools enforce policy.
 - The four single-file hooks remain standalone and stdlib-only. Copy the toolkit
   as a complete directory, including its MIT license.
-- Hooks accept filenames, emit `{file}:{line}: {message} -- {remediation}`, and
+- Hooks accept filenames, emit a file/line location, message, and remediation, and
   exit nonzero on violations. Exemptions use `# allow: {hook-name}` on the relevant
   line, or in the first five lines for file length. Ruff reports syntax and
   encoding errors. See [hook contracts](skills/strictify/SKILL.md#scripts-and-assets).
 - Merge target config without weakening user settings. For a legacy YAML hook
   migration, preserve behavior, verify native `prek.toml`, then remove the old file.
-- The skill, README, and both manifests must agree on the category count.
-  CI synchronizes both manifests' versions from `.claude-plugin/plugin.json`.
+- CI synchronizes both manifests' versions from `.claude-plugin/plugin.json`.
 
 ## Repository boundary enforcement
 
@@ -94,7 +94,7 @@ whole tree. CI runs the same hook suite. Use `uvx prek install` locally and
 ## Non-goals
 
 Strictify targets Python repos. This plugin repo has no `pyproject.toml` or
-application package, so its gate covers hygiene, Ruff, mypy, architecture, category
-counts, and unittest regressions rather than every target-repo category.
+application package, so its gate covers hygiene, Ruff, mypy, architecture, manifest
+identity, and unittest regressions rather than every target-repo category.
 
 Update this map when categories or invariants change.

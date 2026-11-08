@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import re
+import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -99,6 +101,54 @@ class ShippedPolicyTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
                 self.assertIn("private '_secret'", result.stdout)
                 module.unlink()
+
+    def test_shipped_mypy_rejects_untyped_definitions_and_calls(self) -> None:
+        (self.root / "legacy.py").write_text("def takes_int(value):\n    return value + 1\n")
+        (self.root / "app.py").write_text(
+            'from legacy import takes_int\ndef run() -> None:\n    takes_int("wrong type")\n'
+        )
+        result = subprocess.run(
+            [sys.executable, "-m", "mypy", "app.py", "legacy.py"],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("[no-untyped-def]", result.stdout)
+        self.assertIn("[no-untyped-call]", result.stdout)
+
+    def test_installed_private_import_hook_guards_namespace_packages(self) -> None:
+        template = (SKILL / "references/prek-config.md").read_text()
+        config = tomllib.loads(re.findall(r"```toml\n(.*?)```", template, re.DOTALL)[0])
+        hook = next(
+            hook
+            for repo in config["repos"]
+            for hook in repo["hooks"]
+            if hook["id"] == "check-private-test-imports"
+        )
+        command = shlex.split(hook["entry"].replace("{import_package}", "acme"))
+        command[0] = sys.executable
+        destination = self.root / "scripts/prek_hooks"
+        destination.mkdir(parents=True)
+        shutil.copy2(SKILL / "scripts/check_private_test_imports.py", destination)
+        (self.root / "src/acme").mkdir(parents=True)
+        (self.root / "src/acme/model.py").write_text("_secret = 1\n")
+        test = self.root / "test_model.py"
+        for source, expected in (
+            ("from acme.model import _secret\n", 1),
+            ("from acme.model import public\n", 0),
+        ):
+            with self.subTest(source=source):
+                test.write_text(source)
+                result = subprocess.run(  # noqa: S603 -- adapted shipped command in isolated fixture
+                    [*command, test.name],
+                    cwd=self.root,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
 
     def test_beartype_is_not_in_dev_install(self) -> None:
         skill = (SKILL / "SKILL.md").read_text()
