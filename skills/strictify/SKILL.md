@@ -28,12 +28,11 @@ the corresponding tools.
 3. **mypy:** Use `strict = true`; check framework plugins and stubs before adding
    narrow overrides. Settings are in the pyproject reference.
 4. **Beartype:** Follow [runtime integration](references/beartype-setup.md).
-5. **Semantic typing:** Adapt the conventions template to use `NewType` for domain
-   distinctions. `TypeAlias` only renames a type; choosing domain types requires
-   code review, not regex enforcement.
-6. **Parse-don't-validate:** Document boundary parsing into constrained types.
-   `NewType` and frozen dataclasses do not validate input themselves. Pydantic
-   validators enforce values; semantic types add static separation.
+5. **Semantic typing:** Use the sibling
+   [coding-conventions skill](../coding-conventions/SKILL.md) for domain type
+   decisions. Enforce chosen distinctions through mypy, not name-based regexes.
+6. **Parse-don't-validate:** Use coding-conventions to document boundary parsing
+   into validated types. Adopt the project's existing validation approach.
 
 ### Code health (categories 7-10)
 
@@ -62,8 +61,8 @@ the corresponding tools.
 
 ### Architecture and organization (categories 13-16)
 
-13. **Filesystem discipline:** Limit files to 400 code-containing physical lines.
-    Warn on generic module names with the no-junk-drawers asset.
+13. **Filesystem discipline:** Limit files to 400 code-containing physical lines. Use
+    coding-conventions for module naming and ownership guidance.
 14. **Architecture codemap:** Maintain the existing map or create
     `docs/ARCHITECTURE.md`. Keep it proportional to the project: purpose, searchable
     code names, relationships, and invariants. Link executable policy rather than
@@ -94,8 +93,10 @@ the corresponding tools.
     scope; it needs user-managed patterns in a gitignored file.
 21. **Doc gardening:** Keep docs aligned with code. Use back-pointers for duplicated
     values; automate drift detection where recurring drift justifies it.
-22. **Taste enforcer:** Install the hookify rule to capture durable coding
-    preferences as tool settings, hooks, or rules.
+22. **Durable preferences:** Use coding-conventions to preserve durable guidance
+    in linked project conventions. Prefer existing tool settings and checks for
+    mechanical rules. Follow [advisory migration](references/advisory-migration.md)
+    when replacing Hookify reminders; keep blocking policy intact.
 
 ## Apply
 
@@ -134,8 +135,9 @@ Copy `scripts/architecture/` as a complete package, including `LICENSE`, followi
 its guide. Run its public `api` module over configured roots; use reviewed policy
 and baseline exceptions, never line suppressions.
 
-- Copy `assets/hookify.taste-enforcer.md`, `assets/hookify.no-junk-drawers.md`, and
-  `assets/agents.red-green-tdd.md` to `.claude/`. Hookify rules apply to Claude Code.
-- Adapt `assets/CONVENTIONS.md-EXAMPLE` into root `CONVENTIONS.md`. Keep applicable
-  principles, use repo types in examples, and add local conventions. Link it and
-  the architecture/quality docs from `CLAUDE.md` or `AGENTS.md`.
+- Copy `assets/agents.red-green-tdd.md` to `.claude/`.
+- Use [coding-conventions](../coding-conventions/SKILL.md) to establish or update
+  the project's canonical conventions for approved advisory categories. Its
+  linked references own the design guidance; load only the relevant topics.
+  Link project conventions and architecture/quality docs from
+  `CLAUDE.md` or `AGENTS.md`. No Hookify installation is required.
