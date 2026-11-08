@@ -29,7 +29,7 @@ Ask Codex to "strictify this repo."
 
 ## What it does
 
-The [skill](skills/strictify/SKILL.md) covers 22 categories: linting and types,
+The [skill](skills/strictify/SKILL.md) covers linting and types,
 dead code and dependencies, tests and coverage, architecture boundaries,
 worktree isolation, and ongoing enforcement. It merges existing settings and
 installs approved tools and configures hooks through `prek`.

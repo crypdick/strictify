@@ -8,7 +8,6 @@ standalone_modules = [
   "skills.strictify.scripts.check_file_length",
   "skills.strictify.scripts.check_private_test_imports",
   "skills.strictify.scripts.check_timeless_comments",
-  "tools.check_category_count",
   "tools.prepare_plugin_release",
   "tests",
   "tests.test_architecture",
@@ -63,13 +62,6 @@ root = "skills.strictify.scripts.architecture"
 role = "toolkit"
 public_modules = ["skills.strictify.scripts.architecture.api"]
 include_descendants = true
-
-[[packages]]
-name = "category_check"
-root = "tools.check_category_count"
-role = "tool"
-public_modules = []
-include_descendants = false
 
 [[packages]]
 name = "plugin_release"

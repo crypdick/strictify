@@ -117,7 +117,6 @@ max-complexity = 15
 [lint.per-file-ignores]
 "skills/strictify/scripts/**/*.py" = ["T201"]
 "tests/**/*.py" = ["PT"]
-"tools/check_category_count.py" = ["T201"]
 
 [format]
 quote-style = "double"

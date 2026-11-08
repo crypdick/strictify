@@ -48,7 +48,10 @@ class PreparePluginReleaseTests(unittest.TestCase):
             encoding="utf-8",
         )
         (self.root / ".claude-plugin" / "marketplace.json").write_text(
-            json.dumps({"plugins": [{"name": "strictify", "version": marketplace}]}, indent=2) + "\n",
+            json.dumps(
+                {"name": "strictify", "plugins": [{"name": "strictify", "version": marketplace}]}, indent=2
+            )
+            + "\n",
             encoding="utf-8",
         )
 
@@ -178,6 +181,41 @@ class PreparePluginReleaseTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("previous must be a full Git commit SHA", result.stderr)
         self.assertEqual(self.versions(), ("0.8.0", "0.8.0"))
+
+    def test_invalid_manifest_identity_is_rejected_without_writes(self) -> None:
+        self.write_versions("0.8.0")
+        self.commit("base")
+        for plugin_name, marketplace_name, entries in (
+            ("other-plugin", "strictify", [{"name": "strictify", "version": "0.8.0"}]),
+            ("strictify", "other-marketplace", [{"name": "strictify", "version": "0.8.0"}]),
+            ("strictify", "strictify", [{"name": "other-plugin", "version": "0.8.0"}]),
+            ("strictify", "strictify", [{"name": "strictify", "version": "0.8.0"}] * 2),
+        ):
+            with self.subTest(plugin_name=plugin_name, entries=entries):
+                plugin = self.root / ".claude-plugin/plugin.json"
+                marketplace = self.root / ".claude-plugin/marketplace.json"
+                plugin.write_text(json.dumps({"name": plugin_name, "version": "0.8.0"}))
+                marketplace.write_text(json.dumps({"name": marketplace_name, "plugins": entries}))
+                source = self.commit("invalid identity")
+                before = (plugin.read_bytes(), marketplace.read_bytes())
+                result = self.run_tool(source)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("strictify", result.stderr)
+                self.assertEqual((plugin.read_bytes(), marketplace.read_bytes()), before)
+
+    def test_read_only_check_allows_pending_version_sync(self) -> None:
+        self.write_versions("0.9.0", "0.8.0")
+        before = self.versions()
+        result = subprocess.run(
+            [sys.executable, "prepare_plugin_release.py", "--check"],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.versions(), before)
+        self.assertFalse((self.root / "github-output").exists())
 
 
 if __name__ == "__main__":

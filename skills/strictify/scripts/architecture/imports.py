@@ -38,6 +38,52 @@ class Violation:
     line: int
 
 
+_LOADERS = frozenset(
+    {
+        "__import__",
+        "builtins.__import__",
+        "importlib.import_module",
+        "importlib.util.spec_from_file_location",
+        "importlib.machinery.SourceFileLoader",
+        "importlib.machinery.SourcelessFileLoader",
+        "importlib.machinery.ExtensionFileLoader",
+    }
+)
+_LITERAL_LOADERS = frozenset({"__import__", "builtins.__import__", "importlib.import_module"})
+
+
+@dataclass(frozen=True)
+class ImportFacts:
+    static: list[tuple[int, str]]
+    loaders: list[tuple[int, str]]
+    dependencies: list[tuple[str, str, int]]
+
+
+def _bindings(tree: ast.AST) -> dict[str, set[str]]:
+    # Conservatively retain all import bindings, independent of statement order
+    # and lexical scope. Rebinding and runtime control flow are not interpreted.
+    bindings: dict[str, set[str]] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                local = alias.asname or alias.name.split(".")[0]
+                target = alias.name if alias.asname else local
+                bindings.setdefault(local, set()).add(target)
+        elif isinstance(node, ast.ImportFrom):
+            module = "." * node.level + (node.module or "")
+            for alias in node.names:
+                bindings.setdefault(alias.asname or alias.name, set()).add(f"{module}.{alias.name}")
+    return bindings
+
+
+def _names(node: ast.expr, bindings: dict[str, set[str]]) -> set[str]:
+    if isinstance(node, ast.Name):
+        return bindings.get(node.id, {node.id})
+    if isinstance(node, ast.Attribute):
+        return {f"{name}.{node.attr}" for name in _names(node.value, bindings)}
+    return set()
+
+
 def _resolve_from(module: SourceModule, node: ast.ImportFrom) -> str | None:
     if node.level == 0:
         return node.module
@@ -61,14 +107,16 @@ class _ImportVisitor(ast.NodeVisitor):
         module: SourceModule,
         known_modules: set[str],
         first_party_roots: set[str],
+        bindings: dict[str, set[str]],
     ) -> None:
         self.module = module
         self.known_modules = known_modules
         self.first_party_roots = first_party_roots
         self.dependencies: list[tuple[str, str, int]] = []
         self._type_checking_depth = 0
-        self._import_module_names: set[str] = set()
-        self._importlib_names: set[str] = set()
+        self.bindings = bindings
+        self.static: list[tuple[int, str]] = []
+        self.loaders: list[tuple[int, str]] = []
 
     @property
     def _kind(self) -> str:
@@ -98,15 +146,11 @@ class _ImportVisitor(ast.NodeVisitor):
     def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:
             self._add(alias.name, node.lineno)
-            if alias.name == "importlib":
-                self._importlib_names.add(alias.asname or "importlib")
+            self.static.append((node.lineno, alias.name))
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         base = _resolve_from(self.module, node)
-        if base == "importlib":
-            self._import_module_names.update(
-                alias.asname or alias.name for alias in node.names if alias.name == "import_module"
-            )
+        self.static.append((node.lineno, "." * node.level + (node.module or "")))
         targets = {base} if base else set()
         if base:
             submodules = {
@@ -124,42 +168,47 @@ class _ImportVisitor(ast.NodeVisitor):
             self._add(target, node.lineno)
 
     def visit_Call(self, node: ast.Call) -> None:
-        is_loader = isinstance(node.func, ast.Name) and node.func.id in {
-            "__import__",
-            *self._import_module_names,
-        }
-        if isinstance(node.func, ast.Attribute):
-            is_loader = (
-                node.func.attr == "import_module"
-                and isinstance(node.func.value, ast.Name)
-                and node.func.value.id in self._importlib_names
+        loaders = _names(node.func, self.bindings) & _LOADERS
+        self.loaders.extend((node.lineno, name) for name in sorted(loaders))
+        if loaders & _LITERAL_LOADERS:
+            target = (
+                node.args[0]
+                if node.args
+                else next((keyword.value for keyword in node.keywords if keyword.arg == "name"), None)
             )
-        if is_loader and node.args:
-            target = node.args[0]
             if isinstance(target, ast.Constant) and isinstance(target.value, str):
                 self._add(target.value, node.lineno)
         self.generic_visit(node)
 
 
-def collect_dependencies(
+def analyze_modules(
     modules: dict[str, SourceModule],
-    classified: dict[str, Package],
-    packages: tuple[Package, ...],
-) -> tuple[list[Dependency], list[Diagnostic]]:
-    dependencies: list[Dependency] = []
+) -> tuple[dict[str, ImportFacts], list[Diagnostic]]:
+    facts: dict[str, ImportFacts] = {}
     diagnostics: list[Diagnostic] = []
     first_party_roots = {name.split(".", 1)[0] for name in modules}
     for module in modules.values():
-        if module.name not in classified:
-            continue
         try:
             tree = ast.parse(module.path.read_text(encoding="utf-8"), filename=str(module.path))
         except (SyntaxError, UnicodeError, ValueError) as exc:
             diagnostics.append(Diagnostic(module.path.as_posix(), 0, "architecture-parse", str(exc)))
             continue
-        visitor = _ImportVisitor(module, set(modules), first_party_roots)
+        visitor = _ImportVisitor(module, set(modules), first_party_roots, _bindings(tree))
         visitor.visit(tree)
-        for imported, kind, line in visitor.dependencies:
+        facts[module.name] = ImportFacts(visitor.static, visitor.loaders, visitor.dependencies)
+    return facts, diagnostics
+
+
+def collect_dependencies(
+    modules: dict[str, SourceModule],
+    facts: dict[str, ImportFacts],
+    packages: tuple[Package, ...],
+) -> tuple[list[Dependency], list[Diagnostic]]:
+    dependencies: list[Dependency] = []
+    diagnostics: list[Diagnostic] = []
+    for name, analysis in facts.items():
+        module = modules[name]
+        for imported, kind, line in analysis.dependencies:
             target_package = owning_package(imported, packages)
             if target_package is None or imported not in modules:
                 diagnostics.append(

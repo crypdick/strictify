@@ -11,7 +11,7 @@ from .baseline import compare_baseline, load_baseline
 from .budgets import compare_root_module_inbound_import_baseline, root_module_inbound_importer_counts
 from .cycles import check_cycles
 from .discovery import discover_modules
-from .imports import Violation, collect_dependencies, dependency_violations
+from .imports import Violation, analyze_modules, collect_dependencies, dependency_violations
 from .policy import (
     Diagnostic,
     classify_modules,
@@ -35,10 +35,12 @@ def check_architecture(
     diagnostics.extend(policy_cycle_diagnostics(policy, policy_path))
     if diagnostics:
         return sorted(diagnostics), []
-    diagnostics.extend(check_scripts(modules, policy))
+    facts, parse_diagnostics = analyze_modules(modules)
+    diagnostics.extend(parse_diagnostics)
+    diagnostics.extend(check_scripts(modules, facts, policy))
     dependencies, import_diagnostics = collect_dependencies(
         modules,
-        classified,
+        facts,
         packages,
     )
     diagnostics.extend(import_diagnostics)

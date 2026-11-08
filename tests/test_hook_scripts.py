@@ -78,12 +78,12 @@ old = "# previous value"
     def test_timeless_comments_checks_real_docstrings_and_comments(self) -> None:
         """Real docstrings and tokenized comments remain enforced."""
         path = self.write_source(
-            '''"""Legacy adapter."""
+            '''"""Previously an adapter."""
 
 def load() -> str:
-    """Fallback loader."""
+    """Previously loaded synchronously."""
     value = "# old value"
-    return value  # previous behavior
+    return value  # no longer retries
 '''
         )
 
@@ -94,7 +94,7 @@ def load() -> str:
     def test_timeless_comments_honors_exemption_markers(self) -> None:
         """Explicit exemptions and task markers remain allowed."""
         path = self.write_source(
-            """# fallback provider  # temporal-ok
+            """# previously retried  # temporal-ok
 # TODO: replace provider
 """
         )

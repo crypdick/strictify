@@ -54,14 +54,14 @@ def _manifest_versions() -> tuple[dict[str, Any], dict[str, Any], str]:
     plugin = _read_json(PLUGIN)
     marketplace = _read_json(MARKETPLACE)
     plugin_version = plugin.get("version")
+    if plugin.get("name") != "strictify" or marketplace.get("name") != "strictify":
+        raise ValueError("plugin and marketplace names must both be strictify")
     plugins = marketplace.get("plugins")
     if not isinstance(plugins, list):
         raise TypeError(f"{MARKETPLACE} must contain a plugins array")
-    strictify = next(
-        (item for item in plugins if isinstance(item, dict) and item.get("name") == "strictify"), None
-    )
-    if strictify is None:
-        raise ValueError(f"{MARKETPLACE} must register strictify")
+    registrations = [item for item in plugins if isinstance(item, dict) and item.get("name") == "strictify"]
+    if len(registrations) != 1:
+        raise ValueError(f"{MARKETPLACE} must register strictify exactly once")
     if not isinstance(plugin_version, str) or VERSION_RE.fullmatch(plugin_version) is None:
         raise ValueError(f"plugin version must be major.minor.patch: {plugin_version!r}")
     return plugin, marketplace, plugin_version
@@ -105,14 +105,17 @@ def _write_versions(plugin: dict[str, Any], marketplace: dict[str, Any], version
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", required=True)
-    parser.add_argument("--previous", required=True, help="Branch HEAD before this push")
+    parser.add_argument("--check", action="store_true", help="Validate manifest identity without writing")
+    parser.add_argument("--source")
+    parser.add_argument("--previous", help="Branch HEAD before this push")
     args = parser.parse_args()
-    for name in ("source", "previous"):
-        if re.fullmatch(r"[0-9a-f]{40}", getattr(args, name)) is None:
+    for name in () if args.check else ("source", "previous"):
+        if re.fullmatch(r"[0-9a-f]{40}", getattr(args, name) or "") is None:
             parser.error(f"{name} must be a full Git commit SHA")
     try:
         plugin, marketplace, version = _manifest_versions()
+        if args.check:
+            return
         state = _release_state(args.source)
         if state == "new":
             version = _next_version(version, _version_at(args.previous))

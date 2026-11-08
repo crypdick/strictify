@@ -132,6 +132,35 @@ public_modules = ["acme.adapter.api"]
         self.write("src/acme/adapter/api.py", "from acme.domain import api, SECRET\n")
         self.assert_rejected("architecture-visibility", "'acme.domain'")
 
+    def test_literal_loaders_share_dependency_and_permission_checks(self) -> None:
+        self.policy = self.policy.replace("version = 2", "version = 2\nstdlib_only = true")
+        for source in (
+            'import importlib\nimportlib.import_module(name="acme.adapter.internal")\n',
+            'from importlib import import_module as load\nload(name="acme.adapter.internal")\n',
+            'def load():\n    importlib.import_module("acme.adapter.internal")\nimport importlib\n',
+            'import builtins\nbuiltins.__import__(name="acme.adapter.internal")\n',
+            '__import__(name="acme.adapter.internal")\n',
+        ):
+            with self.subTest(source=source):
+                self.write("src/acme/domain/api.py", source)
+                self.assert_rejected(
+                    "architecture-dynamic", "architecture-visibility", "architecture-direction"
+                )
+                original = self.policy
+                self.policy += '\n[dynamic_loading]\n"acme.domain.api"="Intentional literal loader."\n'
+                output = self.assert_rejected("architecture-visibility", "architecture-direction")
+                self.assertNotIn("architecture-dynamic", output)
+                self.policy = original
+
+    def test_standalone_diagnostics_keep_location_and_code(self) -> None:
+        self.policy = self.policy.replace("version = 2", "version = 2\nstdlib_only = true")
+        self.write("src/acme/domain/api.py", "import ast\nimport requests\n")
+        output = self.assert_rejected("src/acme/domain/api.py:2: architecture-script:")
+        self.assertNotIn(str(self.root), output)
+        self.write("src/acme/domain/api.py", "def broken(\n")
+        output = self.assert_rejected("architecture-parse")
+        self.assertEqual(output.count("architecture-parse"), 1)
+
     def test_composition_exception_is_exact_and_stale_checked(self) -> None:
         self.policy = self.policy.replace("version = 2", 'version = 2\ncomposition_roots = ["acme.entry"]')
         self.write("src/acme/entry.py", "import acme.adapter.internal\n")
@@ -235,14 +264,14 @@ reason = "Migrate caller with domain facade."
         self.policy = self.policy.replace(
             "version = 2", 'version = 2\nstdlib_only = true\nstandalone_modules = ["acme.entry"]'
         )
-        for source in (
-            "import requests\n",
-            "import acme.domain.api\n",
-            "from . import domain\n",
-            '__import__("requests")\n',
+        for source, code in (
+            ("import requests\n", "architecture-script"),
+            ("import acme.domain.api\n", "architecture-script"),
+            ("from . import domain\n", "architecture-script"),
+            ('__import__("requests")\n', "architecture-dynamic"),
         ):
             self.write("src/acme/entry.py", source)
-            self.assert_rejected("architecture-script")
+            self.assert_rejected(code)
         self.write("src/acme/entry.py", "import ast\n")
         self.write("src/acme/adapter/api.py", "from . import internal\n")
         self.assert_passes()

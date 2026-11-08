@@ -133,10 +133,12 @@ from expanding the policy and baseline in the same commit.
 The AST checker follows static imports, relative imports, re-exports, and
 `TYPE_CHECKING` blocks without executing source. It checks exact module surfaces,
 not exported symbol names or runtime attribute access. Recognized dynamic forms
-are absolute string-literal `__import__(...)`, `importlib.import_module(...)`, and
-imported/aliased `import_module(...)`. Relative/computed dynamic targets,
-`builtins.__import__`, reassigned callables, arbitrary reflection, subprocesses,
-and data-file access are not a complete dependency graph. Standalone mode also
+are absolute string-literal `__import__(...)`, `importlib.import_module(...)`,
+imported/aliased `import_module(...)`, and `builtins.__import__(...)`, with positional
+or `name=` literal targets. Import bindings are collected conservatively across the
+whole file, independent of statement order and lexical scope; rebinding is not
+interpreted. Relative/computed dynamic targets, reassigned callables, arbitrary
+reflection, subprocesses, and data-file access are not a complete dependency graph. Standalone mode also
 rejects recognized direct import loaders (including common aliases), but is not
 a sandbox. Keep behavior tests for copied scripts and actual runtime boundaries.
 
