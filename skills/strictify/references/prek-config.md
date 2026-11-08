@@ -161,14 +161,12 @@ pass_filenames = false
 always_run = true
 ```
 
-## Notes for the agent
+## Adaptation and migration
 
 - Replace `uv run` for other package managers. Scope or wrap hooks for each
   production package in a monorepo.
 - Run `uvx detect-secrets scan`, review findings, and save the audited
   `.secrets.baseline` before enabling its hook.
-- Deptry needs reliable metadata; schema validation must support actual tool
-  settings; check-sdist requires a publishable distribution.
 - Vulture hook arguments override `pyproject.toml`; synchronize them or remove
   the duplicate arguments.
 - Update pins with `uvx prek update`, inspect the diff, and run affected tools.

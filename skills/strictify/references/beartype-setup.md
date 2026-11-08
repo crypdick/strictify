@@ -23,9 +23,8 @@ return checks remain enabled. See the [import-hook reference](https://beartype.r
 
 ## Verify coverage of runtime checks
 
-Test a production import without development dependencies. Run the suite and
-exercise valid/invalid arguments on representative functions, including decorators
-and generated methods where used.
+Verify production imports without development dependencies and test representative
+valid/invalid calls, including decorator interactions where used.
 
 Keep decoration-failure warnings visible: affected callables may be unchecked.
 Investigate the callable and decorator order before filtering warnings. To make
