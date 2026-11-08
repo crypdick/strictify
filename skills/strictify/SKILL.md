@@ -5,27 +5,17 @@ description: Add Python code quality enforcement when asked to strictify a repo,
 
 # Strictify
 
-Analyze the repo, propose changes across 22 categories, and apply approved changes.
-Fit rules to its size, stack, and responsibilities. Propose strict defaults, explain
-skipped categories, and let the user veto any category. Merge existing settings;
-never remove or weaken them except for the verified hook migrations below.
+Analyze the repo, propose relevant changes across 22 categories, and apply only
+approved changes. Fit strict defaults to the project's needs. Preserve existing
+settings unless replacing them through a verified migration.
 
-## Phase 1: Analyze
+## Analyze and propose
 
-Inspect:
-
-- `pyproject.toml`, `prek.toml`, legacy YAML hook configs, Python version, and package manager.
-- Package layout, `__init__.py`, Beartype, tests, coverage, and external service calls.
-- Architecture docs, ownership, public APIs, actual cross-package imports, existing
-  boundary checks, composition roots, and baselines.
-- README, docs, comments, shared services, and worktree setup.
-- Publication intent, version source, release workflow, trusted publishing, and retry behavior.
-
-## Phase 2: Propose
-
-Show current state → proposed change in these six groups. Apply relevant categories
-within the user's approval; explain omissions. Read linked references before
-writing the corresponding configuration.
+Inspect existing tooling, package boundaries, tests, runtime dependencies, and
+worktree setup. Check publication intent before proposing releases. Summarize
+current gaps and proposed changes; explain consequential trade-offs and skipped
+categories. Let the user veto any category. Read linked references when configuring
+the corresponding tools.
 
 ### Static analysis and type safety (categories 1-6)
 
@@ -72,63 +62,55 @@ writing the corresponding configuration.
 
 ### Architecture and organization (categories 13-16)
 
-13. **Filesystem discipline:** Limit files to 400 logical lines and warn on generic
-    module names with the no-junk-drawers asset.
+13. **Filesystem discipline:** Limit files to 400 code-containing physical lines.
+    Warn on generic module names with the no-junk-drawers asset.
 14. **Architecture codemap:** Maintain the existing map or create
-    `docs/ARCHITECTURE.md`, even for small projects. State purpose, searchable
-    package/file/type names, relationships, and invariants. Link executable
-    policy instead of duplicating allowlists. Review the overview twice yearly;
-    update changed invariants and policy links with code.
+    `docs/ARCHITECTURE.md`. Keep it proportional to the project: purpose, searchable
+    code names, relationships, and invariants. Link executable policy rather than
+    duplicating it; update the map when architecture changes.
 15. **Architecture boundary enforcement:** Follow
     [boundary contracts](references/architecture-boundaries.md). Prefer existing
     enforcement; otherwise use the [bundled toolkit](references/architecture-toolkit.md)
     and [starter policy](assets/architecture.toml). Small projects may need only
     a documented invariant. Do not impose layers or expand into an unapproved migration.
-16. **Quality grades:** Create `docs/QUALITY.md` with module/domain grades for
-    coverage, type safety, complexity, and test health, plus maintenance guidance.
+16. **Quality grades:** Use `docs/QUALITY.md` to identify module/domain quality
+    gaps and maintenance priorities. Prefer existing tool reports over duplicate
+    scorekeeping.
 
 ### Environment and infrastructure (categories 17-18)
 
-17. **Ephemeral environment:** Provide one command to create a worktree, copy
-    local-only config, credentials, and editor settings, install dependencies,
-    start required services, and hand off to the agent. Aim for setup in seconds.
-18. **Per-worktree isolation:** Where shared state exists, derive ports, databases,
-    mutable cache paths, queues, Redis identifiers, and Compose projects/volumes
-    from the worktree name using an offset or hash. Pass them through environment
-    variables in the setup command. Keep content-addressed uv/pip caches shared.
-    Projects without shared state may only need `uv run` from each worktree.
+17. **Ephemeral environment:** Make a fresh worktree ready to use with one command,
+    including required local config, dependencies, and services. Reuse existing setup.
+18. **Per-worktree isolation:** Isolate mutable state and service identifiers between
+    worktrees; derive names or ports from the worktree where useful. Share
+    content-addressed uv/pip caches. Stateless projects may only need `uv run`.
 
 ### Ongoing enforcement (categories 19-22)
 
 19. **Custom hooks:** Install exception-handling, timeless-comment, and private-test-import
-    checks from the scripts below. Copy the red/green TDD directive from assets.
+    checks from the scripts below. Copy the behavior-testing directive from assets.
 20. **Hygiene hooks:** Use the native prek built-ins and audited `detect-secrets`
     baseline in the prek reference. Personal/production string scanning is out of
     scope; it needs user-managed patterns in a gitignored file.
-21. **Doc gardening:** Use a hook, CI job, or recurring agent task that detects
-    drift and opens fixes, according to project maturity. Add `NOTE:` back-pointers
-    where prose duplicates code values, following the conventions template.
+21. **Doc gardening:** Keep docs aligned with code. Use back-pointers for duplicated
+    values; automate drift detection where recurring drift justifies it.
 22. **Taste enforcer:** Install the hookify rule to capture durable coding
     preferences as tool settings, hooks, or rules.
 
-## Phase 3: Apply
+## Apply
 
-For approved categories:
+Merge approved config and adapt the scripts/assets below after reading them.
+Preserve repo-specific behavior during hook replacement; verify native prek config
+before removing legacy YAML. Keep architecture checks whole-tree in prek and CI,
+and link policy and migration guidance from agent instructions.
 
-- Merge the relevant pyproject and prek sections, creating files if absent.
-  Migrate all legacy YAML hook behavior, verify native config, then remove the
-  obsolete file. Preserve repo-specific behavior when replacing overlapping hooks.
-- Copy and adapt the scripts and assets below. Read their contents before use.
-- Persist required development tools through the detected package manager:
-  `uv add --dev ruff mypy` for those checks, `poetry add --group dev`, or a
-  development requirements file. Install only selected tools. Add Beartype at
-  runtime with `uv add beartype` or the package-manager equivalent, then verify
-  a package import without development dependencies.
-- Set up approved docs, boundary checks, environments, and release automation.
-  Run boundary checks over the whole tree in prek and CI. Link policy and package
-  migration instructions from `AGENTS.md` or `CLAUDE.md`.
-- Run `prek install`, verify changed behavior and the full hook suite, and report
-  the changes and unresolved findings.
+Persist selected tools through the project's package manager, e.g.
+`uv add --dev ruff mypy`, Poetry's dev group, or development requirements.
+Beartype is a runtime dependency: use `uv add beartype` or equivalent and verify
+production imports without development dependencies.
+
+Run `prek install`, verify changed behavior and the full hook suite, and report
+changes and unresolved findings.
 
 ## Scripts and assets
 

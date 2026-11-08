@@ -11,9 +11,8 @@ Read architecture docs, agent instructions, checks, and exceptions. Trace caller
 through public APIs to dependencies. Label arrows `A imports B`; execution order
 is not import direction.
 
-Reuse existing enforcement where possible. Before writing a checker, evaluate
-established tools and the bundled toolkit against the cases below. Assign each
-invariant to one checker. Keep ownership and dependency rules in its native config
+Prefer existing enforcement or the bundled toolkit over a new checker.
+Assign each invariant to one checker. Keep ownership and dependency rules in its native config
 (or `architecture.toml` for custom policy), linked from the architecture map and
 agent instructions. Do not duplicate allowlists.
 
@@ -77,9 +76,8 @@ records, and missing reasons. Policy/schema errors cannot enter the baseline.
 Never regenerate it or weaken policy to pass checks. Review edits: a current-tree
 check cannot prevent someone from expanding exceptions in the same commit.
 
-Migrate one owned package at a time: verify its role, curate its API, update all
-consumers and declarations, fix direction violations, and remove stale exceptions.
-Preserve required compatibility. Finish with behavior and boundary checks passing.
+During migrations, update APIs, consumers, policy, and exceptions together.
+Preserve required compatibility and verify behavior and boundaries.
 
 ## Integration and observable verification
 
@@ -92,22 +90,10 @@ Cover static, relative, re-export, and `TYPE_CHECKING` imports; literal dynamic
 imports where supported. Document computed-name and alias-resolution limits.
 AST analysis cannot prove the absence of runtime dependencies.
 
-Use temporary fixtures through the public CLI/API. Before adding custom checks,
-establish failing cases, then verify:
-
-- Allowed public and internal imports pass. Private targets fail visibility;
-  forbidden public dependencies fail direction; violating both reports both.
-- Exact composition roots can assemble implementations; siblings cannot.
-- Unowned units and nonexistent/wrong-owner public modules fail. Internal
-  additions remain private.
-- Relative and type-checking forms retain restrictions. Exercise literal dynamic
-  targets when used.
-- Unknown roles, stale roots, duplicate ownership, and prohibited cycles fail.
-  Test family expansion if enabled.
-- Reviewed baselines pass; replacement targets and increased occurrences fail.
-  Removed imports require shrinking/deleting entries.
-- If budgets apply, repeated imports from one module count once, and exemptions
-  leave outbound restrictions active.
+Verify policy through the public CLI/API with fixtures covering allowed imports,
+each enforced gate, invalid declarations, and baseline growth or removal. Exercise
+composition roots, package families, and budgets when configured. Check diagnostic
+content and exit status, not private implementation details.
 
 Diagnostics must identify location, importer, target, gate, permitted API/direction,
 and remediation. Exit nonzero for violations or malformed policy. Run the full

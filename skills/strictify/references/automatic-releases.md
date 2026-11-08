@@ -36,11 +36,11 @@ A retry matches an existing `Release VERSION` commit whose parent and
 `Source-Commit` both identify the triggering SHA. Any other branch-head mismatch
 is stale and stops successfully.
 
-## Required repository-specific choices
+## Repository integration
 
-Establish package name, branch, Python setup, quality/build commands, PyPI
-environment, and any coupled docs deployment. Follow existing action pinning.
-Grant `contents: write` only to version/tag jobs and `id-token: write` only to publishing.
+Use the repo's package, branch, build/gate commands, publishing environment, and
+action-pinning policy. Preserve coupled deployments. Grant `contents: write` only
+to version/tag jobs and `id-token: write` only to publishing.
 
 Strictify's `.github/workflows/checks.yml` and `tools/prepare_plugin_release.py`
 demonstrate serialization, retries, and synchronized versions. Adapt the transaction

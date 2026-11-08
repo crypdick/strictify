@@ -1,7 +1,7 @@
 # Strict pyproject.toml reference
 
-Use these configs for `pyproject.toml`. Adapt only where the notes or target repo
-require it; replace `{package_name}` with the production package.
+Use these defaults for `pyproject.toml`, adapting to the target repo.
+Replace `{package_name}` with the production package.
 
 ## [tool.ruff] -- Linting and formatting
 
@@ -133,8 +133,8 @@ quote-style = "double"
 
 ### Complexity
 
-Ruff owns complexity through `C901`. Default: 15; use 10 for new projects, or
-20 only for unavoidable data-pipeline branching with an explanatory comment.
+Ruff owns complexity through `C901`. Start at 15; choose a threshold that exposes
+maintenance problems without forcing artificial splits.
 
 ```toml
 [tool.ruff.lint.mccabe]
@@ -203,9 +203,8 @@ module, such as `ortools.*`. Never enable it globally.
 - Remove `-n auto` for tests sharing state that prevents parallel execution.
 - `--cov={package_name}` starts collection; report flags alone do not. Use
   `uv run pytest --no-cov` for a quick run without coverage.
-- Default timeout: 20 seconds. Use 60 for service integration tests or
-  `@pytest.mark.timeout(60)` for individual tests. Choose `signal` only for
-  Unix-only projects where thread timeouts are unreliable.
+- Start with a 20-second timeout; adjust to expected workload, preferably per test.
+  Use `signal` only for Unix-only projects where thread timeouts are unreliable.
 
 ```toml
 [tool.pytest.ini_options]
@@ -217,8 +216,8 @@ timeout = 20
 timeout_method = "thread"
 ```
 
-For Django, set `DJANGO_SETTINGS_MODULE` and consider `--reuse-db`. Data pipelines
-may need `timeout = 120` and serial execution for shared heavyweight fixtures.
+For Django, set `DJANGO_SETTINGS_MODULE` and consider `--reuse-db`. Keep tests
+serial when shared fixtures prevent safe parallel execution.
 
 ## [tool.coverage] -- Code coverage
 
@@ -254,9 +253,8 @@ subprocesses or a public callable.
 
 ## [tool.vulture] -- Dead code detection
 
-Start at confidence 80; use 60 for more candidates or 90 for heavy metaprogramming.
-Prefer specific `ignore_names` for known framework callbacks such as `on_*` or
-`watch_*` before raising confidence.
+Start at confidence 80. Tune for useful findings; prefer narrow framework callback
+exceptions over hiding unrelated dead code.
 
 ```toml
 [tool.vulture]

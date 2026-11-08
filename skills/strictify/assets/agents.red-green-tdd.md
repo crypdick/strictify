@@ -1,10 +1,6 @@
-## Red/Green TDD
+# Behavior tests
 
-For behavior changes and bug fixes:
-
-1. Red: add a focused behavior test and confirm it fails for the expected reason.
-2. Green: make the smallest change that passes it; rerun the test.
-3. Refactor: keep the test green while cleaning up, then run relevant broader tests.
-
-Skip red only when no practical test boundary exists. Explain why and run the
-closest meaningful verification.
+Cover behavior changes and bug fixes with focused tests through public interfaces.
+For regressions, confirm the test catches the bug before fixing it when practical.
+Run relevant checks after the change; use the closest meaningful verification
+when automated testing is impractical.

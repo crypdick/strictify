@@ -40,8 +40,8 @@ Pynchy's MIT-licensed checker.
 
 6. Run the same full-hook command in CI and `uvx prek install` locally. Link policy
    from the architecture map and agent instructions. Verify the installed CLI
-   against the [contract cases](architecture-boundaries.md#integration-and-observable-verification)
-   and run behavior tests for migrated code.
+   against the [boundary contracts](architecture-boundaries.md#integration-and-observable-verification)
+   and test migrated behavior.
 
 ## Policy schema (version 2)
 
@@ -140,8 +140,9 @@ and data-file access are not a complete dependency graph. Standalone mode also
 rejects recognized direct import loaders (including common aliases), but is not
 a sandbox. Keep behavior tests for copied scripts and actual runtime boundaries.
 
-Source roots define scan scope; they need not include every Python file. Empty/missing roots and duplicate discovered module names fail; code
-outside configured roots does not. Deliberately scope generated or vendored code.
+Source roots define scan scope, not necessarily every Python file. Empty/missing
+roots and duplicate module names fail; code outside configured roots does not.
+Deliberately scope generated or vendored code.
 
 ## Strictify as the worked example
 

@@ -32,7 +32,7 @@ invokes the skill.
   architecture contracts, and toolkit setup/schema.
 - `scripts/`: four standalone hooks plus the `architecture/` package. Its public
   `api.py` exposes the CLI/API; implementation modules remain private.
-- `assets/`: starter architecture policy, hookify rules, TDD directive, and the
+- `assets/`: starter architecture policy, hookify rules, behavior-testing directive, and the
   conventions template. Hookify rules and the directive go in `.claude/`.
   Adapt `CONVENTIONS.md-EXAMPLE` into root `CONVENTIONS.md` and link it from agent
   instructions. It holds principles that require code review to apply.
@@ -84,4 +84,4 @@ Strictify targets Python repos. This plugin repo has no `pyproject.toml` or
 application package, so its gate covers hygiene, Ruff, mypy, architecture, category
 counts, and unittest regressions rather than every target-repo category.
 
-Review this map twice yearly or when categories or invariants change.
+Update this map when categories or invariants change.
