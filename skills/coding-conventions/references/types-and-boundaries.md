@@ -1,13 +1,4 @@
-# Design Conventions
-
-> Adapt this template into root `CONVENTIONS.md`: keep applicable principles, use
-> repo types in examples, and add local conventions. Link it from agent instructions.
-
-## Composition over inheritance
-
-Prefer focused collaborators when inheritance creates combinatorial variants.
-Use inheritance where the relationship or framework calls for it; introduce a
-strategy only for behavior that actually varies.
+# Types and boundaries
 
 ## Parse, don't validate
 
@@ -46,15 +37,3 @@ passing `OrgId` where `UserId` is required. It preserves the runtime value while
 adding a distinct static type; `TypeAlias` only supplies another name.
 
 Keep primitives where a distinct domain type adds no protection.
-
-## Keep code and its documentation coupled
-
-Where docs repeat a code value, add a back-pointer at its definition:
-
-```python
-# NOTE: Update docs/security.md § Credential Handling if you change this list.
-allowed_vars = ["PATH", "HOME", "USER"]
-```
-
-Update linked docs with code changes. Use pointers where drift would mislead
-readers; prefer linking to a canonical definition over duplicating values.

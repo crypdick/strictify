@@ -31,11 +31,18 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: main
-          fetch-depth: 2
+          fetch-depth: 0
       - id: version
         env:
           SOURCE_SHA: ${{ github.sha }}
-        run: python3 tools/prepare_plugin_release.py --source "$SOURCE_SHA"
+          PREVIOUS_SHA: ${{ github.event.before }}
+        run: python3 tools/prepare_plugin_release.py --source "$SOURCE_SHA" --previous "$PREVIOUS_SHA"
+      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        if: steps.version.outputs.state == 'new'
+        with:
+          enable-cache: false
+      - if: steps.version.outputs.state == 'new'
+        run: uvx prek run --all-files
       - if: steps.version.outputs.state == 'new'
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}

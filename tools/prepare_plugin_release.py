@@ -34,7 +34,11 @@ def _release_state(source: str) -> str:
         return "new"
     parent = _git("rev-parse", "HEAD^")
     message = _git("log", "-1", "--format=%B")
-    if parent == source and message.startswith("Release ") and f"Source-Commit: {source}" in message:
+    if (
+        parent == source
+        and message.startswith("Release ")
+        and f"Source-Commit: {source}" in message.splitlines()
+    ):
         return "retry"
     return "stale"
 
@@ -58,12 +62,6 @@ def _manifest_versions() -> tuple[dict[str, Any], dict[str, Any], str]:
     )
     if strictify is None:
         raise ValueError(f"{MARKETPLACE} must register strictify")
-    marketplace_version = strictify.get("version")
-    if plugin_version != marketplace_version:
-        raise ValueError(
-            f"plugin manifests disagree: {PLUGIN} has {plugin_version!r}, "
-            f"{MARKETPLACE} has {marketplace_version!r}"
-        )
     if not isinstance(plugin_version, str) or VERSION_RE.fullmatch(plugin_version) is None:
         raise ValueError(f"plugin version must be major.minor.patch: {plugin_version!r}")
     return plugin, marketplace, plugin_version
@@ -108,14 +106,16 @@ def _write_versions(plugin: dict[str, Any], marketplace: dict[str, Any], version
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True)
+    parser.add_argument("--previous", required=True, help="Branch HEAD before this push")
     args = parser.parse_args()
-    if re.fullmatch(r"[0-9a-f]{40}", args.source) is None:
-        parser.error("source must be a full Git commit SHA")
+    for name in ("source", "previous"):
+        if re.fullmatch(r"[0-9a-f]{40}", getattr(args, name)) is None:
+            parser.error(f"{name} must be a full Git commit SHA")
     try:
         plugin, marketplace, version = _manifest_versions()
         state = _release_state(args.source)
         if state == "new":
-            version = _next_version(version, _version_at(f"{args.source}^"))
+            version = _next_version(version, _version_at(args.previous))
             _write_versions(plugin, marketplace, version)
     except (KeyError, OSError, subprocess.CalledProcessError, TypeError, ValueError) as error:
         parser.error(str(error))
