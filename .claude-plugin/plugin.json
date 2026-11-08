@@ -1,6 +1,6 @@
 {
   "name": "strictify",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "description": "Set up Python code quality checks and review code design with the coding-conventions skill.",
   "author": {
     "name": "Ricardo Decal"
